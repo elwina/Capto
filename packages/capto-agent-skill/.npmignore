@@ -1,0 +1,4 @@
+# Keep publish set to package.json "files"; ignore local noise if present.
+*.tgz
+.DS_Store
+Thumbs.db

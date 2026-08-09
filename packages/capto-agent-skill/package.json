@@ -11,6 +11,14 @@
     "README.md",
     "LICENSE"
   ],
+  "agentskills": {
+    "skills": [
+      {
+        "name": "capto",
+        "path": "./skills/capto"
+      }
+    ]
+  },
   "keywords": [
     "agent-skill",
     "agentskills",
@@ -35,5 +43,8 @@
   },
   "publishConfig": {
     "access": "public"
+  },
+  "scripts": {
+    "prepublishOnly": "node -e \"require('fs').accessSync('skills/capto/SKILL.md')\""
   }
 }

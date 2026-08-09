@@ -8,6 +8,7 @@
     "ffmpeg:copy": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/copy-ffmpeg.ps1",
     "test:rust": "cargo test --workspace",
     "cli": "cargo run -p capto-cli --",
-    "skill:pack": "npm pack ./packages/capto-agent-skill"
+    "skill:pack": "npm pack ./packages/capto-agent-skill",
+    "skill:publish": "npm publish ./packages/capto-agent-skill --access public"
   }
 }
