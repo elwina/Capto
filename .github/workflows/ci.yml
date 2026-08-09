@@ -43,6 +43,13 @@ jobs:
           # Tauri externalBin requires ffmpeg-<host-triple>.exe when building capto-app.
           .\scripts\download-ffmpeg.ps1 -VerifyAttestation
 
+      - name: Stage CLI for Tauri resources
+        shell: pwsh
+        run: |
+          # tauri.conf.json bundles binaries/capto.exe as resources — build.rs fails if missing.
+          cargo build -p capto-cli
+          .\scripts\copy-cli.ps1 -Profile debug
+
       - name: cargo test --workspace
         run: cargo test --workspace --all-targets
 
@@ -103,6 +110,15 @@ jobs:
           $path = "apps/desktop/src-tauri/binaries/ffmpeg-${{ matrix.target }}.exe"
           if (-not (Test-Path $path)) { throw "missing $path" }
           Write-Host "OK $path ($((Get-Item $path).Length) bytes)"
+
+      - name: Stage CLI for Tauri resources
+        shell: pwsh
+        run: |
+          cargo build -p capto-cli --target ${{ matrix.target }}
+          .\scripts\copy-cli.ps1 -TargetTriple "${{ matrix.target }}" -Profile debug
+          if (-not (Test-Path "apps/desktop/src-tauri/binaries/capto.exe")) {
+            throw "missing apps/desktop/src-tauri/binaries/capto.exe"
+          }
 
       - name: cargo check (desktop + cli)
         run: cargo check -p capto-app -p capto-cli --target ${{ matrix.target }}

@@ -2,13 +2,17 @@
 ; Only `$INSTDIR\cli` is added (never `$INSTDIR`), so Capto.exe cannot shadow `capto`
 ; on case-insensitive Windows.
 ;
-; This file is !include'd before PRODUCTNAME / UNINSTKEY / INSTALLMODE are defined.
-; Anything that needs those defines must live in NSIS_HOOK_* macros (expanded later).
+; This file is !include'd after StrFunc.nsh + ${StrLoc} in installer.nsi, but before
+; PRODUCTNAME / UNINSTKEY / INSTALLMODE. Anything needing those defines must live in
+; NSIS_HOOK_* macros (expanded later).
 ;
 ; Wired from tauri.conf.json → bundle.windows.nsis.installerHooks
 
 !include "LogicLib.nsh"
 !include "WinMessages.nsh"
+
+; Uninstall section cannot Call StrLoc — need the un. variant.
+${UnStrLoc}
 
 Var CaptoPathIsMachine
 
@@ -111,7 +115,7 @@ Function un.CaptoRemoveCliPath
 
   StrCpy $1 ";$0;"
 CaptoRemoveCliPath_loop:
-  ${StrLoc} $3 $1 ";$R9;" ">"
+  ${UnStrLoc} $3 $1 ";$R9;" ">"
   ${If} $3 == ""
     Goto CaptoRemoveCliPath_finish
   ${EndIf}
