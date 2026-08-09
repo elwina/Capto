@@ -3,7 +3,7 @@ name = "capto-cli"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
-description = "Capto command-line interface"
+description = "Capto command-line interface (controls desktop via local HTTP)"
 
 [[bin]]
 name = "capto-cli"
@@ -13,11 +13,11 @@ path = "src/main.rs"
 clap = { version = "4", features = ["derive"] }
 tokio = { workspace = true }
 anyhow = { workspace = true }
+serde = { workspace = true }
 serde_json = { workspace = true }
 tracing = { workspace = true }
 tracing-subscriber = { version = "0.3", features = ["env-filter"] }
+reqwest = { workspace = true }
+capto-ipc = { workspace = true }
 capto-core = { workspace = true }
-capto-capture = { workspace = true }
 capto-encode = { workspace = true }
-capto-overlay = { workspace = true }
-capto-audio = { workspace = true }

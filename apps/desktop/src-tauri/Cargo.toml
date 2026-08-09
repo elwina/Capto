@@ -29,3 +29,9 @@ capto-encode = { workspace = true }
 capto-overlay = { workspace = true }
 capto-hooks = { workspace = true }
 tauri-plugin-dialog = "2"
+tauri-plugin-single-instance = "2"
+axum = { workspace = true }
+tower = { workspace = true }
+http = { workspace = true }
+capto-ipc = { workspace = true }
+uuid = { workspace = true }

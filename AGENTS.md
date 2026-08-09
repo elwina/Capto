@@ -22,7 +22,8 @@ Stack: **Tauri 2 + Rust + React/TypeScript**. No C#. No cloud upload.
 | `crates/capto-encode` | FFmpeg sidecar + encoder probe |
 | `crates/capto-overlay` | Overlay layout / compositor helpers |
 | `crates/capto-hooks` | Hotkey / input hook abstractions |
-| `crates/capto-cli` | CLI sharing core |
+| `crates/capto-ipc` | Local CLI↔desktop control-plane types + lockfile |
+| `crates/capto-cli` | CLI client for the desktop control plane |
 | `docs/ARCHITECTURE.md` | Pipeline contracts |
 
 ## Cloud vs local Windows

@@ -8,6 +8,7 @@ members = [
   "crates/capto-encode",
   "crates/capto-overlay",
   "crates/capto-hooks",
+  "crates/capto-ipc",
   "crates/capto-cli",
 ]
 
@@ -34,3 +35,8 @@ capto-audio = { path = "crates/capto-audio" }
 capto-encode = { path = "crates/capto-encode" }
 capto-overlay = { path = "crates/capto-overlay" }
 capto-hooks = { path = "crates/capto-hooks" }
+capto-ipc = { path = "crates/capto-ipc" }
+axum = "0.8"
+tower = "0.5"
+http = "1"
+reqwest = { version = "0.12", default-features = false, features = ["json", "rustls-tls"] }

@@ -59,13 +59,30 @@ Tauri commands (intent only):
 - `take_screenshot`
 - `get_session_state`
 
-Events: `session://state`, `session://tick`
+Events: `session://state`, `session://tick`, `settings://changed`
+
+## Single instance
+
+Desktop is **single-process only** via `tauri-plugin-single-instance` (registered first). A second launch exits immediately and focuses the existing `main` window. There is one `RecordingSession` and one CLI control plane for the whole machine.
+
+## CLI control plane
+
+`capto-cli` does **not** own a recording session. It talks to the running desktop over localhost HTTP:
+
+1. Desktop binds `127.0.0.1:<ephemeral>` and writes `{config_dir}/Capto/cli-server.json` (`pid`, `port`, `token`, `version`).
+2. CLI reads the lock file, sends `Authorization: Bearer <token>`, calls `/v1/...`.
+3. If the plane is down, CLI spawns `Capto.exe` (or `CAPTO_APP_PATH`) and polls until ready. Single-instance ensures that spawn cannot create a second session.
+
+Shared types live in `capto-ipc`. Default CLI stdout is a JSON envelope `{ ok, data | error }`.
+
+Endpoints (v1): `status`, `doctor`, `config` (GET/PATCH), `config/path`, `record/start|stop|pause|resume`, `shot`, `list/{displays,windows,audio,encoders}`, `outputs/recent`, `outputs/open`.
 
 ## Security / privacy
 
 - No network upload features in product code
 - Output paths are user-controlled local directories
 - Global hooks only while enabled in settings
+- CLI control plane listens on loopback only; token in the user config dir
 
 ## Cross-platform
 

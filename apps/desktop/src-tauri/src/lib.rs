@@ -1,21 +1,25 @@
 use capto_capture::CaptureTarget;
 use capto_core::{
-    AppSettings, OutputFormat, RecordRequest, RecordingSession, Region, SessionSnapshot,
-    SessionState, VideoSourceKind,
+    AppSettings, OutputFormat, RecordingSession, Region, SessionSnapshot, SessionState,
+    VideoSourceKind,
 };
 use capto_encode::{EncoderInfo, VideoEncoderKind};
 use capto_hooks::HotkeyAction;
+use capto_ipc::{RecordStartRequest, ShotRequest};
 use serde::{Deserialize, Serialize};
 use std::path::PathBuf;
+use std::sync::Arc;
 use tauri::{
     menu::{Menu, MenuItem},
     tray::{MouseButton, MouseButtonState, TrayIconBuilder, TrayIconEvent},
-    AppHandle, Emitter, Manager, PhysicalPosition, PhysicalSize, State, WindowEvent,
+    AppHandle, Manager, PhysicalPosition, PhysicalSize, RunEvent, State, WindowEvent,
 };
 use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut, ShortcutState};
 use tokio::sync::Mutex;
 
+mod cli_server;
 mod record_overlay;
+mod session_svc;
 
 pub struct AppState {
     pub session: Mutex<RecordingSession>,
@@ -55,8 +59,7 @@ fn sidecar_dir(app: &AppHandle) -> Option<PathBuf> {
 
 #[tauri::command]
 async fn get_settings(state: State<'_, AppState>) -> Result<AppSettings, String> {
-    let session = state.session.lock().await;
-    Ok(session.settings().clone())
+    Ok(session_svc::get_settings(&state).await)
 }
 
 #[tauri::command]
@@ -65,19 +68,7 @@ async fn save_settings(
     state: State<'_, AppState>,
     settings: AppSettings,
 ) -> Result<(), String> {
-    let mut session = state.session.lock().await;
-    let hotkeys_changed = session.settings().hotkeys != settings.hotkeys;
-    *session.settings_mut() = settings.clone();
-    session.settings().save().map_err(|e| e.to_string())?;
-    drop(session);
-    if hotkeys_changed {
-        let conflicts = register_hotkeys(&app, &settings);
-        *state
-            .hotkey_conflicts
-            .lock()
-            .expect("hotkey conflict state poisoned") = conflicts;
-    }
-    Ok(())
+    session_svc::save_settings(&app, &state, settings, register_hotkeys).await
 }
 
 #[tauri::command]
@@ -198,84 +189,41 @@ struct StartArgs {
     quality: Option<u8>,
 }
 
+impl From<StartArgs> for RecordStartRequest {
+    fn from(args: StartArgs) -> Self {
+        RecordStartRequest {
+            source: args.source,
+            display_id: args.display_id,
+            window_id: args.window_id,
+            region: args.region,
+            include_cursor: args.include_cursor,
+            mic_device: args.mic_device,
+            loopback_device: args.loopback_device,
+            mic_volume: args.mic_volume,
+            loopback_volume: args.loopback_volume,
+            encoder: args.encoder,
+            format: args.format,
+            fps: args.fps,
+            quality: args.quality,
+        }
+    }
+}
+
 #[tauri::command]
 async fn start_recording(
     app: AppHandle,
     state: State<'_, AppState>,
     args: StartArgs,
 ) -> Result<SessionSnapshot, String> {
-    if let Some(meter) = state.audio_meter.lock().await.take() {
-        meter.stop();
-    }
-    let session = state.session.lock().await;
-    let settings = session.settings().clone();
-    let format = args.format.unwrap_or(settings.output_format);
-    let output_path = session.make_output_path(format);
-    // The GUI always sends the current selection, including explicit `null`
-    // for None. Falling back here would resurrect a stale saved endpoint.
-    let mic_device = args.mic_device;
-    let loopback_device = args.loopback_device;
-
-    let req = RecordRequest {
-        source: args.source,
-        display_id: args.display_id.or(settings.default_display_id),
-        window_id: args.window_id,
-        region: args.region.or(settings.default_region.clone()),
-        include_cursor: args.include_cursor.unwrap_or(settings.include_cursor),
-        mic_device,
-        loopback_device,
-        mic_volume: args.mic_volume.unwrap_or(settings.mic_volume).min(200),
-        loopback_volume: args.loopback_volume.unwrap_or(settings.loopback_volume).min(200),
-        encoder: args.encoder.or(settings.preferred_encoder),
-        format,
-        fps: args.fps.unwrap_or(settings.fps),
-        quality: args.quality.unwrap_or(settings.quality).clamp(1, 100),
-        output_path: output_path.to_string_lossy().into_owned(),
-        overlays: settings.overlays.clone(),
-        hide_app_while_recording: settings.hide_app_while_recording,
-    };
-    // Windows cameras are exclusive to one process graph; MF webcam is owned by
-    // Rust (preview or record). Just release DXGI preview so the record pump can duplicate.
-    capto_capture::release_preview_session();
-    let (snap, region) = match session.start(req).await {
-        Ok(v) => v,
-        Err(e) => return Err(e.to_string()),
-    };
-    if snap.hide_app {
-        if let Some(win) = app.get_webview_window("main") {
-            let _ = win.hide();
-        }
-    }
-    {
-        let overlays = session.settings().overlays.clone();
-        drop(session);
-        let mut overlay = state.overlay.lock().await;
-        if let Some(mut old) = overlay.take() {
-            old.stop(&app);
-        }
-        match record_overlay::RecordOverlayController::start(&app, overlays, region) {
-            Ok(ctrl) => *overlay = Some(ctrl),
-            Err(e) => tracing::warn!(%e, "record overlay failed to start"),
-        }
-    }
-    let _ = app.emit("session://state", &snap);
-    Ok(snap)
+    session_svc::start_recording(&app, &state, args.into()).await
 }
-
 
 #[tauri::command]
 async fn pause_recording(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<SessionSnapshot, String> {
-    let session = state.session.lock().await;
-    let snap = session.pause().await.map_err(|e| e.to_string())?;
-    drop(session);
-    if let Some(overlay) = state.overlay.lock().await.as_mut() {
-        overlay.pause(&app);
-    }
-    let _ = app.emit("session://state", &snap);
-    Ok(snap)
+    session_svc::pause_recording(&app, &state).await
 }
 
 #[tauri::command]
@@ -283,16 +231,7 @@ async fn resume_recording(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<SessionSnapshot, String> {
-    let session = state.session.lock().await;
-    let snap = session.resume().await.map_err(|e| e.to_string())?;
-    drop(session);
-    if let Some(overlay) = state.overlay.lock().await.as_mut() {
-        if let Err(e) = overlay.resume(&app) {
-            tracing::warn!(%e, "record overlay resume failed");
-        }
-    }
-    let _ = app.emit("session://state", &snap);
-    Ok(snap)
+    session_svc::resume_recording(&app, &state).await
 }
 
 #[tauri::command]
@@ -300,20 +239,7 @@ async fn stop_recording(
     app: AppHandle,
     state: State<'_, AppState>,
 ) -> Result<SessionSnapshot, String> {
-    {
-        let mut overlay = state.overlay.lock().await;
-        if let Some(mut ctrl) = overlay.take() {
-            ctrl.stop(&app);
-        }
-    }
-    let session = state.session.lock().await;
-    let snap = session.stop().await.map_err(|e| e.to_string())?;
-    if let Some(win) = app.get_webview_window("main") {
-        let _ = win.show();
-        let _ = win.set_focus();
-    }
-    let _ = app.emit("session://state", &snap);
-    Ok(snap)
+    session_svc::stop_recording(&app, &state).await
 }
 
 #[derive(Debug, Deserialize)]
@@ -325,56 +251,24 @@ struct ShotArgs {
     region: Option<Region>,
 }
 
-fn capture_target(args: ShotArgs) -> Result<CaptureTarget, String> {
-    match args.source {
-        VideoSourceKind::Display => Ok(CaptureTarget::Display {
-            id: args.display_id.unwrap_or(0),
-        }),
-        VideoSourceKind::Window => {
-            // Window ids come from HWND (picker), not xcap list indices, so resolve the
-            // live rect and capture it as a screen-space region.
-            let id = args
-                .window_id
-                .ok_or_else(|| "windowId required".to_string())?;
-            match capto_capture::window_by_id(id).map_err(|e| e.to_string())? {
-                Some(w) => Ok(CaptureTarget::Region {
-                    x: w.x,
-                    y: w.y,
-                    width: w.width.max(2),
-                    height: w.height.max(2),
-                }),
-                None => match args.region {
-                    Some(r) => Ok(CaptureTarget::Region {
-                        x: r.x,
-                        y: r.y,
-                        width: r.width,
-                        height: r.height,
-                    }),
-                    None => Err("selected window is gone — pick it again".into()),
-                },
-            }
-        }
-        VideoSourceKind::Region => {
-            let r = args.region.ok_or_else(|| "region required".to_string())?;
-            Ok(CaptureTarget::Region {
-                x: r.x,
-                y: r.y,
-                width: r.width,
-                height: r.height,
-            })
+impl From<ShotArgs> for ShotRequest {
+    fn from(args: ShotArgs) -> Self {
+        ShotRequest {
+            source: args.source,
+            display_id: args.display_id,
+            window_id: args.window_id,
+            region: args.region,
         }
     }
 }
 
+fn capture_target(args: ShotArgs) -> Result<CaptureTarget, String> {
+    session_svc::capture_target(&args.into())
+}
+
 #[tauri::command]
 async fn take_screenshot(state: State<'_, AppState>, args: ShotArgs) -> Result<String, String> {
-    let session = state.session.lock().await;
-    let target = capture_target(args)?;
-    let path = session.default_screenshot_path();
-    let saved = session
-        .take_screenshot(&target, &path)
-        .map_err(|e| e.to_string())?;
-    Ok(saved.to_string_lossy().into_owned())
+    session_svc::take_screenshot(&state, args.into()).await
 }
 
 /// Masked area as a 0..1 fraction of the frame, so the UI can badge it at any
@@ -702,24 +596,10 @@ async fn hotkey_start(app: &AppHandle) {
     drop(session);
     match snap.state {
         SessionState::Idle => {
-            let _ = start_recording(
-                app.clone(),
-                app.state::<AppState>(),
-                StartArgs {
-                    source: settings.default_source.clone(),
-                    display_id: settings.default_display_id.or(Some(0)),
-                    window_id: None,
-                    region: settings.default_region.clone(),
-                    include_cursor: None,
-                    mic_device: settings.mic_device,
-                    loopback_device: settings.loopback_device,
-                    mic_volume: Some(settings.mic_volume),
-                    loopback_volume: Some(settings.loopback_volume),
-                    encoder: None,
-                    format: None,
-                    fps: None,
-                    quality: None,
-                },
+            let _ = session_svc::start_recording(
+                app,
+                &app.state::<AppState>(),
+                session_svc::default_start_from_settings(&settings),
             )
             .await;
         }
@@ -894,7 +774,20 @@ fn init_tracing() {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     init_tracing();
-    tauri::Builder::default()
+    let mut builder = tauri::Builder::default();
+
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_single_instance::init(|app, _argv, _cwd| {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.unminimize();
+                let _ = window.show();
+                let _ = window.set_focus();
+            }
+        }));
+    }
+
+    builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
@@ -927,7 +820,10 @@ pub fn run() {
                 .menu(&menu)
                 .tooltip("Capto")
                 .on_menu_event(|app, event| match event.id.as_ref() {
-                    "quit" => app.exit(0),
+                    "quit" => {
+                        cli_server::shutdown_control_plane();
+                        app.exit(0);
+                    }
                     "show" => {
                         if let Some(w) = app.get_webview_window("main") {
                             let _ = w.show();
@@ -986,6 +882,13 @@ pub fn run() {
                 .lock()
                 .expect("hotkey conflict state poisoned") = conflicts;
 
+            let register: Arc<
+                dyn Fn(&AppHandle, &AppSettings) -> Vec<String> + Send + Sync,
+            > = Arc::new(|app, settings| register_hotkeys(app, settings));
+            if let Err(e) = cli_server::start_control_plane(app.handle().clone(), register) {
+                tracing::error!(%e, "failed to start CLI control plane");
+            }
+
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -1030,6 +933,11 @@ pub fn run() {
             get_virtual_screen,
             get_window_label,
         ])
-        .run(tauri::generate_context!())
-        .expect("error while running Capto");
+        .build(tauri::generate_context!())
+        .expect("error while building Capto")
+        .run(|_app, event| {
+            if let RunEvent::Exit = event {
+                cli_server::shutdown_control_plane();
+            }
+        });
 }

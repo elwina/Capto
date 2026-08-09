@@ -22,8 +22,9 @@
 ### P1
 
 - Overlay：图片 / 文字静态烧录
-- CLI：`capto record|shot|list`
+- CLI：经本机 HTTP 控制桌面（`status` / `record` / `shot` / `config` / `list` / `outputs` / `doctor`），默认 JSON，可自动拉起 Capto
 - 热键自定义设置 UI（默认四键已注册）
+- 桌面单实例（二次启动只聚焦已有进程）
 
 ### 明确不做
 
@@ -45,10 +46,15 @@ npm run tauri --prefix apps/desktop -- dev
 # 测试
 cargo test --workspace
 
-# CLI
+# CLI（控制正在运行的桌面会话；未开则自动启动）
+cargo run -p capto-cli -- status
 cargo run -p capto-cli -- list displays
-cargo run -p capto-cli -- shot --source display
-cargo run -p capto-cli -- record --duration 3 --format mp4
+cargo run -p capto-cli -- config get fps
+cargo run -p capto-cli -- record start --source display
+cargo run -p capto-cli -- record stop
+cargo run -p capto-cli -- outputs recent --limit 5
+# 开发时若找不到 Capto.exe：
+# $env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto.exe"
 ```
 
 详见 [AGENTS.md](AGENTS.md) 与 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。

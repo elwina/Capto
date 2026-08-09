@@ -1,58 +1,45 @@
+mod client;
+mod launch;
+
 use anyhow::{bail, Context, Result};
-use capto_capture::CaptureTarget;
-use capto_core::{
-    AppSettings, OutputFormat, RecordRequest, RecordingSession, Region, VideoSourceKind,
-};
+use capto_core::{OutputFormat, Region, VideoSourceKind};
 use capto_encode::VideoEncoderKind;
-use clap::{Parser, Subcommand};
-use std::path::PathBuf;
-use std::time::Duration;
+use capto_ipc::{
+    ExitCode, OpenOutputsRequest, RecordStartRequest, ShotRequest,
+};
+use clap::{Parser, Subcommand, ValueEnum};
+use serde_json::{json, Value};
+use std::process::ExitCode as StdExitCode;
 
 #[derive(Parser, Debug)]
 #[command(
-    name = "capto-cli",
+    name = "capto",
     version,
-    about = "Capto — local screen capture CLI"
+    about = "Capto CLI — control the Capto desktop app (agent-friendly JSON)"
 )]
 struct Cli {
+    /// Pretty-print human text instead of JSON envelope
+    #[arg(long, global = true)]
+    human: bool,
+
+    /// Do not auto-launch Capto if the control plane is down
+    #[arg(long, global = true)]
+    no_launch: bool,
+
     #[command(subcommand)]
     command: Commands,
 }
 
 #[derive(Subcommand, Debug)]
 enum Commands {
-    /// Record screen / region / window to a file
+    /// Session status
+    Status,
+    /// Readiness / environment probe
+    Doctor,
+    /// Recording controls
     Record {
-        #[arg(long, default_value = "display")]
-        source: String,
-        #[arg(long)]
-        display: Option<u32>,
-        #[arg(long)]
-        window: Option<u32>,
-        #[arg(long)]
-        x: Option<i32>,
-        #[arg(long)]
-        y: Option<i32>,
-        #[arg(long)]
-        width: Option<u32>,
-        #[arg(long)]
-        height: Option<u32>,
-        #[arg(long, default_value_t = 5)]
-        duration: u64,
-        #[arg(long)]
-        output: Option<PathBuf>,
-        #[arg(long, default_value = "mp4")]
-        format: String,
-        #[arg(long)]
-        fps: Option<u32>,
-        #[arg(long)]
-        no_cursor: bool,
-        #[arg(long)]
-        mic: Option<String>,
-        #[arg(long)]
-        loopback: Option<String>,
-        #[arg(long)]
-        encoder: Option<String>,
+        #[command(subcommand)]
+        action: RecordAction,
     },
     /// Take a screenshot
     Shot {
@@ -70,17 +57,94 @@ enum Commands {
         width: Option<u32>,
         #[arg(long)]
         height: Option<u32>,
-        #[arg(long)]
-        output: Option<PathBuf>,
     },
-    /// List displays, windows, audio devices, encoders
+    /// Settings get / set / path
+    Config {
+        #[command(subcommand)]
+        action: ConfigAction,
+    },
+    /// List displays, windows, audio, encoders
     List {
         #[arg(value_enum)]
         what: ListWhat,
     },
+    /// Recent outputs / open files
+    Outputs {
+        #[command(subcommand)]
+        action: OutputsAction,
+    },
 }
 
-#[derive(Clone, Debug, clap::ValueEnum)]
+#[derive(Subcommand, Debug)]
+enum RecordAction {
+    Start {
+        #[arg(long, default_value = "display")]
+        source: String,
+        #[arg(long)]
+        display: Option<u32>,
+        #[arg(long)]
+        window: Option<u32>,
+        #[arg(long)]
+        x: Option<i32>,
+        #[arg(long)]
+        y: Option<i32>,
+        #[arg(long)]
+        width: Option<u32>,
+        #[arg(long)]
+        height: Option<u32>,
+        #[arg(long, default_value = "mp4")]
+        format: String,
+        #[arg(long)]
+        fps: Option<u32>,
+        #[arg(long)]
+        quality: Option<u8>,
+        #[arg(long)]
+        no_cursor: bool,
+        #[arg(long)]
+        mic: Option<String>,
+        #[arg(long)]
+        loopback: Option<String>,
+        #[arg(long)]
+        encoder: Option<String>,
+    },
+    Stop,
+    Pause,
+    Resume,
+}
+
+#[derive(Subcommand, Debug)]
+enum ConfigAction {
+    /// Print full settings or a single key
+    Get {
+        key: Option<String>,
+    },
+    /// Patch settings: `--json '{...}'` or `key=value` pairs
+    Set {
+        #[arg(long)]
+        json: Option<String>,
+        /// key=value pairs (camelCase keys, e.g. fps=60)
+        pairs: Vec<String>,
+    },
+    /// Print settings.json path
+    Path,
+}
+
+#[derive(Subcommand, Debug)]
+enum OutputsAction {
+    Recent {
+        #[arg(long, default_value_t = 20)]
+        limit: usize,
+    },
+    Open {
+        path: Option<String>,
+        #[arg(long)]
+        last: bool,
+        #[arg(long)]
+        folder: bool,
+    },
+}
+
+#[derive(Clone, Debug, ValueEnum)]
 enum ListWhat {
     Displays,
     Windows,
@@ -89,37 +153,84 @@ enum ListWhat {
 }
 
 #[tokio::main]
-async fn main() -> Result<()> {
-    tracing_subscriber::fmt().with_env_filter("info").init();
+async fn main() -> StdExitCode {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("warn")),
+        )
+        .with_writer(std::io::stderr)
+        .init();
 
     let cli = Cli::parse();
-    let settings = AppSettings::load();
-    let sidecar = default_sidecar_dir();
-    let mut session = RecordingSession::new(settings.clone(), sidecar);
+    match run(cli).await {
+        Ok(()) => StdExitCode::from(ExitCode::Ok.as_i32() as u8),
+        Err(err) => {
+            let code = err.exit_code;
+            let envelope = json!({
+                "ok": false,
+                "error": { "code": err.code, "message": err.message }
+            });
+            if err.human {
+                eprintln!("{}: {}", err.code, err.message);
+            } else {
+                println!("{}", serde_json::to_string_pretty(&envelope).unwrap_or_default());
+            }
+            StdExitCode::from(code.as_i32() as u8)
+        }
+    }
+}
 
-    match cli.command {
-        Commands::List { what } => match what {
-            ListWhat::Displays => {
-                let list = session.capture().list_displays()?;
-                println!("{}", serde_json::to_string_pretty(&list)?);
+struct CliError {
+    code: String,
+    message: String,
+    exit_code: ExitCode,
+    human: bool,
+}
+
+async fn run(cli: Cli) -> Result<(), CliError> {
+    let human = cli.human;
+    let auto_launch = !cli.no_launch;
+
+    let client = client::ControlClient::connect(auto_launch)
+        .await
+        .map_err(|e| CliError {
+            code: "desktopUnavailable".into(),
+            message: e.to_string(),
+            exit_code: ExitCode::DesktopUnavailable,
+            human,
+        })?;
+
+    let result = match cli.command {
+        Commands::Status => client.get("/v1/status").await,
+        Commands::Doctor => client.get("/v1/doctor").await,
+        Commands::Record { action } => match action {
+            RecordAction::Start {
+                source,
+                display,
+                window,
+                x,
+                y,
+                width,
+                height,
+                format,
+                fps,
+                quality,
+                no_cursor,
+                mic,
+                loopback,
+                encoder,
+            } => {
+                let body = build_start_request(
+                    &source, display, window, x, y, width, height, &format, fps, quality,
+                    no_cursor, mic, loopback, encoder,
+                )
+                .map_err(|e| usage(e.to_string(), human))?;
+                client.post_json("/v1/record/start", &body).await
             }
-            ListWhat::Windows => {
-                let list = session.capture().list_windows()?;
-                println!("{}", serde_json::to_string_pretty(&list)?);
-            }
-            ListWhat::Audio => {
-                let list = capto_audio::list_devices()?;
-                println!("{}", serde_json::to_string_pretty(&list)?);
-            }
-            ListWhat::Encoders => {
-                session.refresh_encoder()?;
-                let enc = session
-                    .encoder()
-                    .context("bundled ffmpeg not found — run scripts/copy-ffmpeg.ps1")?
-                    .probe_encoders()
-                    .await?;
-                println!("{}", serde_json::to_string_pretty(&enc)?);
-            }
+            RecordAction::Stop => client.post_empty("/v1/record/stop").await,
+            RecordAction::Pause => client.post_empty("/v1/record/pause").await,
+            RecordAction::Resume => client.post_empty("/v1/record/resume").await,
         },
         Commands::Shot {
             source,
@@ -129,79 +240,98 @@ async fn main() -> Result<()> {
             y,
             width,
             height,
-            output,
         } => {
-            let target = parse_target(&source, display, window, x, y, width, height)?;
-            let path = output.unwrap_or_else(|| session.default_screenshot_path());
-            let saved = session.take_screenshot(&target, &path)?;
-            println!("{}", saved.display());
+            let body = build_shot_request(&source, display, window, x, y, width, height)
+                .map_err(|e| usage(e.to_string(), human))?;
+            client.post_json("/v1/shot", &body).await
         }
-        Commands::Record {
-            source,
-            display,
-            window,
-            x,
-            y,
-            width,
-            height,
-            duration,
-            output,
-            format,
-            fps,
-            no_cursor,
-            mic,
-            loopback,
-            encoder,
-        } => {
-            session
-                .refresh_encoder()
-                .context("bundled ffmpeg required — run scripts/copy-ffmpeg.ps1")?;
-            let format = parse_format(&format)?;
-            let out = output.unwrap_or_else(|| session.make_output_path(format));
-            let source_kind = parse_source(&source)?;
-            let region = match (x, y, width, height) {
-                (Some(x), Some(y), Some(w), Some(h)) => Some(Region {
-                    x,
-                    y,
-                    width: w,
-                    height: h,
-                }),
-                _ => None,
+        Commands::Config { action } => match action {
+            ConfigAction::Get { key } => {
+                let data = client.get("/v1/config").await.map_err(|e| map_http(e, human))?;
+                if let Some(k) = key {
+                    let v = data
+                        .get(&k)
+                        .cloned()
+                        .ok_or_else(|| usage(format!("unknown settings key: {k}"), human))?;
+                    Ok(v)
+                } else {
+                    Ok(data)
+                }
+            }
+            ConfigAction::Set { json, pairs } => {
+                let patch = build_config_patch(json, pairs).map_err(|e| usage(e.to_string(), human))?;
+                client.patch_json("/v1/config", &patch).await
+            }
+            ConfigAction::Path => client.get("/v1/config/path").await,
+        },
+        Commands::List { what } => {
+            let path = match what {
+                ListWhat::Displays => "/v1/list/displays",
+                ListWhat::Windows => "/v1/list/windows",
+                ListWhat::Audio => "/v1/list/audio",
+                ListWhat::Encoders => "/v1/list/encoders",
             };
-            let enc = encoder.as_deref().map(parse_encoder).transpose()?;
-
-            let req = RecordRequest {
-                source: source_kind,
-                display_id: display,
-                window_id: window,
-                region,
-                include_cursor: !no_cursor,
-                mic_device: mic,
-                loopback_device: loopback,
-                mic_volume: settings.mic_volume,
-                loopback_volume: settings.loopback_volume,
-                encoder: enc,
-                format,
-                fps: fps.unwrap_or(settings.fps),
-                quality: settings.quality,
-                output_path: out.to_string_lossy().into_owned(),
-                overlays: settings.overlays.clone(),
-                hide_app_while_recording: false,
-            };
-
-            let (snap, _) = session.start(req).await?;
-            println!(
-                "recording {} ({:?})",
-                snap.output_path.as_deref().unwrap_or("?"),
-                snap.encoder
-            );
-            tokio::time::sleep(Duration::from_secs(duration)).await;
-            let done = session.stop().await?;
-            println!("saved {}", done.output_path.as_deref().unwrap_or("?"));
+            client.get(path).await
         }
-    }
+        Commands::Outputs { action } => match action {
+            OutputsAction::Recent { limit } => {
+                client
+                    .get(&format!("/v1/outputs/recent?limit={limit}"))
+                    .await
+            }
+            OutputsAction::Open { path, last, folder } => {
+                let body = OpenOutputsRequest {
+                    path,
+                    last,
+                    folder,
+                };
+                client.post_json("/v1/outputs/open", &body).await
+            }
+        },
+    };
 
+    let data = result.map_err(|e| map_http(e, human))?;
+    emit_ok(data, human);
     Ok(())
+}
+
+fn usage(message: impl Into<String>, human: bool) -> CliError {
+    CliError {
+        code: "usage".into(),
+        message: message.into(),
+        exit_code: ExitCode::Usage,
+        human,
+    }
+}
+
+fn map_http(err: client::HttpError, human: bool) -> CliError {
+    let exit_code = match err.code.as_str() {
+        "unauthorized" | "desktopUnavailable" => ExitCode::DesktopUnavailable,
+        "stateConflict" => ExitCode::StateConflict,
+        "capture" => ExitCode::Capture,
+        "encode" => ExitCode::Encode,
+        "configIo" => ExitCode::ConfigIo,
+        "badRequest" | "usage" => ExitCode::Usage,
+        _ => ExitCode::DesktopUnavailable,
+    };
+    CliError {
+        code: err.code,
+        message: err.message,
+        exit_code,
+        human,
+    }
+}
+
+fn emit_ok(data: Value, human: bool) {
+    if human {
+        println!("{}", serde_json::to_string_pretty(&data).unwrap_or_default());
+    } else {
+        let envelope = json!({ "ok": true, "data": data });
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&envelope).unwrap_or_default()
+        );
+    }
 }
 
 fn parse_source(s: &str) -> Result<VideoSourceKind> {
@@ -237,22 +367,24 @@ fn parse_encoder(s: &str) -> Result<VideoEncoderKind> {
     })
 }
 
-fn default_sidecar_dir() -> Option<PathBuf> {
-    let mut candidates = vec![
-        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../apps/desktop/src-tauri/binaries"),
-    ];
-    if let Ok(exe) = std::env::current_exe() {
-        if let Some(parent) = exe.parent() {
-            candidates.push(parent.to_path_buf());
-            candidates.push(parent.join("binaries"));
-        }
+fn region_from(
+    x: Option<i32>,
+    y: Option<i32>,
+    width: Option<u32>,
+    height: Option<u32>,
+) -> Option<Region> {
+    match (x, y, width, height) {
+        (Some(x), Some(y), Some(w), Some(h)) => Some(Region {
+            x,
+            y,
+            width: w,
+            height: h,
+        }),
+        _ => None,
     }
-    candidates
-        .into_iter()
-        .find(|dir| capto_encode::FfmpegEncoder::dir_has_ffmpeg(dir))
 }
 
-fn parse_target(
+fn build_start_request(
     source: &str,
     display: Option<u32>,
     window: Option<u32>,
@@ -260,20 +392,86 @@ fn parse_target(
     y: Option<i32>,
     width: Option<u32>,
     height: Option<u32>,
-) -> Result<CaptureTarget> {
-    Ok(match source {
-        "display" | "screen" => CaptureTarget::Display {
-            id: display.unwrap_or(0),
-        },
-        "window" => CaptureTarget::Window {
-            id: window.context("--window required")?,
-        },
-        "region" => CaptureTarget::Region {
-            x: x.context("--x required")?,
-            y: y.context("--y required")?,
-            width: width.context("--width required")?,
-            height: height.context("--height required")?,
-        },
-        other => bail!("unknown source: {other}"),
+    format: &str,
+    fps: Option<u32>,
+    quality: Option<u8>,
+    no_cursor: bool,
+    mic: Option<String>,
+    loopback: Option<String>,
+    encoder: Option<String>,
+) -> Result<RecordStartRequest> {
+    let enc = encoder.as_deref().map(parse_encoder).transpose()?;
+    Ok(RecordStartRequest {
+        source: parse_source(source)?,
+        display_id: display,
+        window_id: window,
+        region: region_from(x, y, width, height),
+        include_cursor: Some(!no_cursor),
+        mic_device: mic,
+        loopback_device: loopback,
+        mic_volume: None,
+        loopback_volume: None,
+        encoder: enc,
+        format: Some(parse_format(format)?),
+        fps,
+        quality,
     })
+}
+
+fn build_shot_request(
+    source: &str,
+    display: Option<u32>,
+    window: Option<u32>,
+    x: Option<i32>,
+    y: Option<i32>,
+    width: Option<u32>,
+    height: Option<u32>,
+) -> Result<ShotRequest> {
+    Ok(ShotRequest {
+        source: parse_source(source)?,
+        display_id: display,
+        window_id: window,
+        region: region_from(x, y, width, height),
+    })
+}
+
+fn build_config_patch(json: Option<String>, pairs: Vec<String>) -> Result<Value> {
+    let mut obj = if let Some(raw) = json {
+        let v: Value = serde_json::from_str(&raw).context("invalid --json")?;
+        match v {
+            Value::Object(map) => map,
+            _ => bail!("--json must be an object"),
+        }
+    } else {
+        serde_json::Map::new()
+    };
+    for pair in pairs {
+        let (k, v) = pair
+            .split_once('=')
+            .with_context(|| format!("expected key=value, got {pair}"))?;
+        let parsed = parse_config_value(v);
+        obj.insert(k.to_string(), parsed);
+    }
+    if obj.is_empty() {
+        bail!("provide --json or key=value pairs");
+    }
+    Ok(Value::Object(obj))
+}
+
+fn parse_config_value(raw: &str) -> Value {
+    if let Ok(v) = serde_json::from_str::<Value>(raw) {
+        return v;
+    }
+    if let Ok(n) = raw.parse::<i64>() {
+        return json!(n);
+    }
+    if let Ok(n) = raw.parse::<f64>() {
+        return json!(n);
+    }
+    match raw {
+        "true" => json!(true),
+        "false" => json!(false),
+        "null" => Value::Null,
+        _ => json!(raw),
+    }
 }
