@@ -35,11 +35,8 @@ jobs:
         include:
           - arch: x64
             target: x86_64-pc-windows-msvc
-            bundles: nsis
           - arch: arm64
             target: aarch64-pc-windows-msvc
-            # MSI does not support Windows arm64; NSIS only.
-            bundles: nsis
 
     steps:
       - uses: actions/checkout@v7
@@ -98,12 +95,13 @@ jobs:
 
             - Bundled FFmpeg from [`elwina/capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) (SHA-256 + attestation; pin in `.github/capto-ffmpeg.env`)
             - Architectures: **x64**, **arm64**
+            - Installer: NSIS `.exe` setup
             - CLI: `capto-windows-x64.exe` / `capto-windows-arm64.exe`
 
-            Install the NSIS setup for your CPU. arm64 uses NSIS only (no MSI).
+            Install the setup matching your CPU.
           releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
-          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+          args: --target ${{ matrix.target }} --bundles nsis
 
   attach-cli:
     name: Attach CLI to release

@@ -37,10 +37,10 @@ Checks:
 
 | Display | Rust target (internal) | Installer | CLI asset |
 |---------|------------------------|-----------|-----------|
-| **x64** | `x86_64-pc-windows-msvc` | NSIS | `capto-windows-x64.exe` |
-| **arm64** | `aarch64-pc-windows-msvc` | NSIS only (no MSI) | `capto-windows-arm64.exe` |
+| **x64** | `x86_64-pc-windows-msvc` | NSIS `.exe` | `capto-windows-x64.exe` |
+| **arm64** | `aarch64-pc-windows-msvc` | NSIS `.exe` | `capto-windows-arm64.exe` |
 
-Job titles and release assets use **x64 / arm64**. The `*-windows-msvc` strings are only Rust target triples (Windows ABI), not a product dependency on “MSVC tooling” beyond the normal Windows runner toolchain.
+Job titles and release assets use **x64 / arm64**. The `*-windows-msvc` strings are only Rust target triples (Windows ABI). **MSI is not built** — NSIS setup exe only.
 
 ## GitHub Actions versions
 
