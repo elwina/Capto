@@ -22,7 +22,7 @@ jobs:
     name: Rust test / clippy
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -48,11 +48,11 @@ jobs:
       run:
         working-directory: apps/desktop
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
 
@@ -60,16 +60,18 @@ jobs:
       - run: npx tsc --noEmit
 
   check-targets:
-    name: Check ${{ matrix.target }}
+    name: Check ${{ matrix.arch }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-pc-windows-msvc
-          - target: aarch64-pc-windows-msvc
+          - arch: x64
+            target: x86_64-pc-windows-msvc
+          - arch: arm64
+            target: aarch64-pc-windows-msvc
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Install Rust stable
         uses: dtolnay/rust-toolchain@stable
@@ -80,11 +82,12 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
-          key: check-${{ matrix.target }}
+          key: check-${{ matrix.arch }}
 
-      - name: Download Capto FFmpeg (${{ matrix.target }})
+      - name: Download Capto FFmpeg (${{ matrix.arch }})
         shell: pwsh
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CAPTO_FFMPEG_VERIFY_ATTESTATION: "1"
         run: |
           .\scripts\download-ffmpeg.ps1 -TargetTriple "${{ matrix.target }}" -VerifyAttestation
@@ -93,16 +96,15 @@ jobs:
           Write-Host "OK $path ($((Get-Item $path).Length) bytes)"
 
       - name: cargo check (desktop + cli)
-        run: |
-          cargo check -p capto-app -p capto-cli --target ${{ matrix.target }}
+        run: cargo check -p capto-app -p capto-cli --target ${{ matrix.target }}
 
   skill-pack:
     name: Agent skill package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
       - name: npm pack dry-run
         run: npm pack ./packages/capto-agent-skill --dry-run

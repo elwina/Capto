@@ -1,8 +1,7 @@
 name: Release
 
-# Builds signed-ready Windows installers (x64 + ARM64) with FFmpeg embedded
-# from elwina/capto-ffmpeg releases (SHA-256 + optional attestation).
-# Separate from CI — run on version tags or manually.
+# Windows x64 + arm64 installers with FFmpeg embedded from elwina/capto-ffmpeg
+# (SHA-256 + Artifact Attestation). Separate from CI.
 
 on:
   push:
@@ -17,7 +16,7 @@ on:
 permissions:
   contents: write
   id-token: write
-  attestations: read # verify elwina/capto-ffmpeg Artifact Attestations
+  attestations: read
 
 concurrency:
   group: release-${{ github.ref }}
@@ -28,25 +27,27 @@ env:
 
 jobs:
   release:
-    name: Release ${{ matrix.target }}
+    name: Release ${{ matrix.arch }}
     runs-on: windows-latest
     strategy:
       fail-fast: false
       matrix:
         include:
-          - target: x86_64-pc-windows-msvc
+          - arch: x64
+            target: x86_64-pc-windows-msvc
             bundles: nsis
-          - target: aarch64-pc-windows-msvc
-            # MSI does not support Windows ARM64; NSIS only.
+          - arch: arm64
+            target: aarch64-pc-windows-msvc
+            # MSI does not support Windows arm64; NSIS only.
             bundles: nsis
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
 
       - name: Setup Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v6
         with:
-          node-version: lts/*
+          node-version: "24"
           cache: npm
           cache-dependency-path: apps/desktop/package-lock.json
 
@@ -59,15 +60,16 @@ jobs:
         uses: swatinem/rust-cache@v2
         with:
           workspaces: ". -> target"
-          key: release-${{ matrix.target }}
+          key: release-${{ matrix.arch }}
 
       - name: Install frontend deps
         working-directory: apps/desktop
         run: npm ci
 
-      - name: Download Capto FFmpeg (${{ matrix.target }})
+      - name: Download Capto FFmpeg (${{ matrix.arch }})
         shell: pwsh
         env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           CAPTO_FFMPEG_VERIFY_ATTESTATION: "1"
         run: |
           .\scripts\download-ffmpeg.ps1 -TargetTriple "${{ matrix.target }}" -VerifyAttestation
@@ -77,14 +79,14 @@ jobs:
         run: cargo build -p capto-cli --release --target ${{ matrix.target }}
 
       - name: Upload CLI artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
-          name: capto-cli-${{ matrix.target }}
+          name: capto-cli-${{ matrix.arch }}
           path: target/${{ matrix.target }}/release/capto.exe
           if-no-files-found: error
 
       - name: Build Tauri installer
-        uses: tauri-apps/tauri-action@v0
+        uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
@@ -94,11 +96,11 @@ jobs:
           releaseBody: |
             Capto **v__VERSION__** (Windows).
 
-            - Bundled FFmpeg from [`elwina/capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) (SHA-256 verified; see `.github/capto-ffmpeg.env`)
-            - Architectures: `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`
-            - CLI binary `capto.exe` is attached as a workflow artifact / release asset when published
+            - Bundled FFmpeg from [`elwina/capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) (SHA-256 + attestation; pin in `.github/capto-ffmpeg.env`)
+            - Architectures: **x64**, **arm64**
+            - CLI: `capto-windows-x64.exe` / `capto-windows-arm64.exe`
 
-            Install the NSIS setup matching your CPU. ARM64 uses NSIS only (no MSI).
+            Install the NSIS setup for your CPU. arm64 uses NSIS only (no MSI).
           releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
           args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
@@ -109,21 +111,21 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/download-artifact@v4
+      - uses: actions/download-artifact@v5
         with:
           path: artifacts
 
       - name: Rename CLI assets
         run: |
           mkdir -p out
-          cp artifacts/capto-cli-x86_64-pc-windows-msvc/capto.exe out/capto-windows-x86_64.exe
-          cp artifacts/capto-cli-aarch64-pc-windows-msvc/capto.exe out/capto-windows-aarch64.exe
+          cp artifacts/capto-cli-x64/capto.exe out/capto-windows-x64.exe
+          cp artifacts/capto-cli-arm64/capto.exe out/capto-windows-arm64.exe
           ls -la out
 
       - name: Upload CLI to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            out/capto-windows-x86_64.exe
-            out/capto-windows-aarch64.exe
+            out/capto-windows-x64.exe
+            out/capto-windows-arm64.exe
           fail_on_unmatched_files: true

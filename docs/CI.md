@@ -35,12 +35,21 @@ Checks:
 
 ## Architectures
 
-| Triple | Installer | CLI asset name |
-|--------|-----------|----------------|
-| `x86_64-pc-windows-msvc` | NSIS | `capto-windows-x86_64.exe` |
-| `aarch64-pc-windows-msvc` | NSIS only (no MSI) | `capto-windows-aarch64.exe` |
+| Display | Rust target (internal) | Installer | CLI asset |
+|---------|------------------------|-----------|-----------|
+| **x64** | `x86_64-pc-windows-msvc` | NSIS | `capto-windows-x64.exe` |
+| **arm64** | `aarch64-pc-windows-msvc` | NSIS only (no MSI) | `capto-windows-arm64.exe` |
 
-## Local parity
+Job titles and release assets use **x64 / arm64**. The `*-windows-msvc` strings are only Rust target triples (Windows ABI), not a product dependency on “MSVC tooling” beyond the normal Windows runner toolchain.
+
+## GitHub Actions versions
+
+Aligned with Tauri’s current pipeline docs + Node 24 runners:
+
+- `actions/checkout@v7`
+- `actions/setup-node@v6` with `node-version: "24"`
+- `tauri-apps/tauri-action@v1`
+- `actions/upload-artifact@v5` / `actions/download-artifact@v5`
 
 ```powershell
 cargo test --workspace

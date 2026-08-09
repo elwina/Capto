@@ -87,9 +87,12 @@ try {
 
     if ($VerifyAttestation -or $env:CAPTO_FFMPEG_VERIFY_ATTESTATION -eq "1") {
         if (Get-Command gh -ErrorAction SilentlyContinue) {
-            & gh attestation verify $downloaded -R $Repository
+            # Prefer --repo (gh attestation API). Fall back to -R for older gh.
+            $verifyArgs = @("attestation", "verify", $downloaded, "--repo", $Repository)
+            Write-Host "Running: gh $($verifyArgs -join ' ')"
+            & gh @verifyArgs
             if ($LASTEXITCODE -ne 0) {
-                throw "Attestation verification failed for $asset"
+                throw "Attestation verification failed for $asset (exit $LASTEXITCODE). Ensure GH_TOKEN can read attestations on $Repository."
             }
         } else {
             Write-Warning "gh not found; skipping attestation verify (SHA-256 still checked)."
