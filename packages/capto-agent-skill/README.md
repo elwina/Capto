@@ -26,7 +26,9 @@ Reference contract: `skills/capto/references/cli.md`.
 
 ## Publish checklist (maintainers)
 
-1. Bump `version` in `package.json` and `skills/capto/SKILL.md` metadata together.
+Skill npm version is **independent** of Capto app releases (`0.1.0` skill ≠ Capto `0.2.0`).
+
+1. Bump skill `version` in `package.json` and `skills/capto/SKILL.md` metadata together (only when the skill docs/contract change).
 2. Keep `references/cli.md` aligned with repo [`docs/CLI.md`](../../docs/CLI.md).
 3. Dry-run pack:
 

@@ -1,6 +1,6 @@
 {
   "name": "capto-agent-skill",
-  "version": "0.2.0",
+  "version": "0.1.0",
   "description": "Agent Skills package for driving Capto screen capture via the local `capto` CLI",
   "license": "MIT",
   "author": "Elwina Vardal",
