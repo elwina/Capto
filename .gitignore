@@ -1,0 +1,39 @@
+# Dependencies / build
+node_modules/
+dist/
+target/
+
+# IDE
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.swp
+*.swo
+
+# OS
+Thumbs.db
+Desktop.ini
+.DS_Store
+
+# Env / secrets
+.env
+.env.*
+!.env.example
+
+# FFmpeg sidecar binaries (download locally; do not commit large binaries)
+apps/desktop/src-tauri/binaries/ffmpeg*
+apps/desktop/src-tauri/binaries/ffprobe*
+!apps/desktop/src-tauri/binaries/README.md
+
+# Recordings / local output
+recordings/
+captures/
+*.mp4
+*.gif
+*.avi
+!docs/**
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*

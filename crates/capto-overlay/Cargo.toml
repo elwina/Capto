@@ -1,0 +1,11 @@
+[package]
+name = "capto-overlay"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Overlay models and layout helpers for Capto"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+tracing = { workspace = true }

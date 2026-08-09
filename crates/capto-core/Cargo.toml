@@ -1,0 +1,25 @@
+[package]
+name = "capto-core"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Recording session orchestration for Capto"
+
+[dependencies]
+serde = { workspace = true }
+serde_json = { workspace = true }
+thiserror = { workspace = true }
+anyhow = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+chrono = { workspace = true }
+uuid = { workspace = true }
+capto-capture = { workspace = true }
+capto-audio = { workspace = true }
+capto-encode = { workspace = true }
+capto-overlay = { workspace = true }
+capto-hooks = { workspace = true }
+dirs = "6"
+
+[dev-dependencies]
+tempfile = "3"

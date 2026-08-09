@@ -1,0 +1,31 @@
+[package]
+name = "capto"
+version.workspace = true
+description = "Capto desktop shell"
+authors.workspace = true
+edition.workspace = true
+license.workspace = true
+
+[lib]
+name = "capto_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-opener = "2"
+tauri-plugin-global-shortcut = "2"
+serde = { workspace = true }
+serde_json = { workspace = true }
+tokio = { workspace = true }
+tracing = { workspace = true }
+tracing-subscriber = { workspace = true }
+capto-core = { workspace = true }
+capto-capture = { workspace = true }
+capto-audio = { workspace = true }
+capto-encode = { workspace = true }
+capto-overlay = { workspace = true }
+capto-hooks = { workspace = true }
+tauri-plugin-dialog = "2"

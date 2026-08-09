@@ -1,0 +1,19 @@
+[package]
+name = "capto-hooks"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Hotkey definitions and input-hook abstractions"
+
+[dependencies]
+serde = { workspace = true }
+thiserror = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+  "Win32_Foundation",
+  "Win32_System_Threading",
+  "Win32_UI_HiDpi",
+  "Win32_UI_Input_KeyboardAndMouse",
+  "Win32_UI_WindowsAndMessaging",
+] }

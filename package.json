@@ -1,0 +1,12 @@
+{
+  "name": "capto-workspace",
+  "private": true,
+  "scripts": {
+    "dev": "npm run tauri --prefix apps/desktop -- dev",
+    "build": "npm run tauri --prefix apps/desktop -- build",
+    "desktop:install": "npm install --prefix apps/desktop",
+    "ffmpeg:copy": "powershell -NoProfile -ExecutionPolicy Bypass -File ./scripts/copy-ffmpeg.ps1",
+    "test:rust": "cargo test --workspace",
+    "cli": "cargo run -p capto-cli --"
+  }
+}
