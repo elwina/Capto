@@ -34,6 +34,15 @@ jobs:
         with:
           workspaces: ". -> target"
 
+      - name: Download Capto FFmpeg (host)
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CAPTO_FFMPEG_VERIFY_ATTESTATION: "1"
+        run: |
+          # Tauri externalBin requires ffmpeg-<host-triple>.exe when building capto-app.
+          .\scripts\download-ffmpeg.ps1 -VerifyAttestation
+
       - name: cargo test --workspace
         run: cargo test --workspace --all-targets
 
