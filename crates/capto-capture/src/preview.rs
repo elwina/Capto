@@ -4,7 +4,8 @@
 //! on every grab (~5 Hz in Capto) — that reads as mouse jitter. DXGI/WGC do not.
 
 use crate::{
-    list_monitor_rects, window_by_id, CaptureError, CaptureTarget, Frame, Result, VirtualScreen,
+    list_monitor_rects, monitor_index_for_rect, window_by_id, CaptureError, CaptureTarget, Frame,
+    Result, VirtualScreen,
 };
 use std::sync::Mutex;
 use std::time::{SystemTime, UNIX_EPOCH};
@@ -174,16 +175,6 @@ mod windows_impl {
         })
     }
 
-    fn display_for_point(x: i32, y: i32) -> Result<u32> {
-        let rects = list_monitor_rects();
-        for (idx, r) in rects.iter().enumerate() {
-            if x >= r.x && y >= r.y && x < r.x + r.width as i32 && y < r.y + r.height as i32 {
-                return Ok(idx as u32);
-            }
-        }
-        Ok(0)
-    }
-
     pub fn capture_preview_frame(target: &CaptureTarget) -> Result<(Frame, Option<(i32, i32)>)> {
         match target {
             CaptureTarget::Display { id } => {
@@ -196,7 +187,7 @@ mod windows_impl {
                 width,
                 height,
             } => {
-                let id = display_for_point(*x, *y)?;
+                let id = monitor_index_for_rect(*x, *y, *width, *height);
                 let (full, (ox, oy)) = grab_monitor(id)?;
                 let rel_x = (*x - ox).max(0) as u32;
                 let rel_y = (*y - oy).max(0) as u32;
@@ -206,7 +197,7 @@ mod windows_impl {
             CaptureTarget::Window { id } => {
                 let info = window_by_id(*id)?
                     .ok_or_else(|| CaptureError::WindowNotFound(id.to_string()))?;
-                let display_id = display_for_point(info.x, info.y)?;
+                let display_id = monitor_index_for_rect(info.x, info.y, info.width, info.height);
                 let (full, (ox, oy)) = grab_monitor(display_id)?;
                 let rel_x = (info.x - ox).max(0) as u32;
                 let rel_y = (info.y - oy).max(0) as u32;

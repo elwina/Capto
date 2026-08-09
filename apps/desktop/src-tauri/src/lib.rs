@@ -456,52 +456,91 @@ async fn get_virtual_screen() -> Result<capto_capture::VirtualScreen, String> {
     Ok(capto_capture::virtual_screen())
 }
 
-async fn open_overlay_window(app: &AppHandle, label: &str, title: &str) -> Result<(), String> {
+async fn close_overlay_kind(app: &AppHandle, kind: &str) {
+    let prefix = format!("{kind}-");
+    let labels: Vec<String> = app
+        .webview_windows()
+        .keys()
+        .filter(|l| *l == kind || l.starts_with(&prefix))
+        .cloned()
+        .collect();
+    for label in labels {
+        if let Some(w) = app.get_webview_window(&label) {
+            let _ = w.close();
+        }
+    }
+}
+
+/// One transparent overlay per physical monitor.
+/// A single window spanning the virtual desktop breaks on secondary / mixed-DPI screens.
+async fn open_overlay_windows(app: &AppHandle, kind: &str, title: &str) -> Result<(), String> {
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.hide();
     }
-    if let Some(existing) = app.get_webview_window(label) {
-        let _ = existing.show();
-        let _ = existing.set_focus();
-        return Ok(());
+    close_overlay_kind(app, kind).await;
+
+    let mut monitors = capto_capture::list_monitor_rects();
+    if monitors.is_empty() {
+        monitors.push(capto_capture::virtual_screen());
     }
 
-    let screen = capto_capture::virtual_screen();
-    let window =
-        tauri::WebviewWindowBuilder::new(app, label, tauri::WebviewUrl::App("index.html".into()))
-            .title(title)
-            .transparent(true)
-            .decorations(false)
-            .always_on_top(true)
-            .skip_taskbar(true)
-            .resizable(false)
-            .visible(true)
-            .build()
-            .map_err(|e| e.to_string())?;
+    for (i, mon) in monitors.iter().enumerate() {
+        let label = format!("{kind}-{i}");
+        let window = tauri::WebviewWindowBuilder::new(
+            app,
+            &label,
+            tauri::WebviewUrl::App("index.html".into()),
+        )
+        .title(title)
+        .transparent(true)
+        .decorations(false)
+        .shadow(false)
+        .always_on_top(true)
+        .skip_taskbar(true)
+        .resizable(false)
+        .visible(true)
+        .focused(i == 0)
+        .background_color(tauri::window::Color(0, 0, 0, 0))
+        .build()
+        .map_err(|e| format!("create overlay {label}: {e}"))?;
 
-    // Cover the whole physical virtual desktop (all monitors).
-    let _ = window.set_position(tauri::Position::Physical(PhysicalPosition::new(
-        screen.x, screen.y,
-    )));
-    let _ = window.set_size(tauri::Size::Physical(PhysicalSize::new(
-        screen.width,
-        screen.height,
-    )));
-    let _ = window.set_fullscreen(false);
-    let _ = window.set_focus();
+        window
+            .set_position(tauri::Position::Physical(PhysicalPosition::new(
+                mon.x, mon.y,
+            )))
+            .map_err(|e| format!("position overlay {label}: {e}"))?;
+        window
+            .set_size(tauri::Size::Physical(PhysicalSize::new(
+                mon.width.max(2),
+                mon.height.max(2),
+            )))
+            .map_err(|e| format!("size overlay {label}: {e}"))?;
+        let _ = window.set_fullscreen(false);
+    }
+
+    // Focus the overlay under the cursor when possible.
+    if let Ok(pt) = capto_capture::cursor_position() {
+        for (i, mon) in monitors.iter().enumerate() {
+            if mon.contains_point(pt.x, pt.y) {
+                if let Some(w) = app.get_webview_window(&format!("{kind}-{i}")) {
+                    let _ = w.set_focus();
+                }
+                break;
+            }
+        }
+    }
+
     Ok(())
 }
 
 #[tauri::command]
 async fn open_window_picker(app: AppHandle) -> Result<(), String> {
-    open_overlay_window(&app, "picker", "Capto — Pick Window").await
+    open_overlay_windows(&app, "picker", "Capto — Pick Window").await
 }
 
 #[tauri::command]
 async fn close_window_picker(app: AppHandle) -> Result<(), String> {
-    if let Some(picker) = app.get_webview_window("picker") {
-        let _ = picker.close();
-    }
+    close_overlay_kind(&app, "picker").await;
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.show();
         let _ = main.set_focus();
@@ -511,14 +550,12 @@ async fn close_window_picker(app: AppHandle) -> Result<(), String> {
 
 #[tauri::command]
 async fn open_region_picker(app: AppHandle) -> Result<(), String> {
-    open_overlay_window(&app, "region-picker", "Capto — Select Region").await
+    open_overlay_windows(&app, "region-picker", "Capto — Select Region").await
 }
 
 #[tauri::command]
 async fn close_region_picker(app: AppHandle) -> Result<(), String> {
-    if let Some(picker) = app.get_webview_window("region-picker") {
-        let _ = picker.close();
-    }
+    close_overlay_kind(&app, "region-picker").await;
     if let Some(main) = app.get_webview_window("main") {
         let _ = main.show();
         let _ = main.set_focus();

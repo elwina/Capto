@@ -44,6 +44,16 @@ impl VirtualScreen {
         }
     }
 
+    pub fn intersection_area(&self, x: i32, y: i32, width: u32, height: u32) -> i64 {
+        let left = x.max(self.x);
+        let top = y.max(self.y);
+        let right = (x + width as i32).min(self.x + self.width as i32);
+        let bottom = (y + height as i32).min(self.y + self.height as i32);
+        let w = (right - left).max(0) as i64;
+        let h = (bottom - top).max(0) as i64;
+        w * h
+    }
+
     /// Convert screen-space rect to crop coords inside a full-desktop bitmap
     /// whose (0,0) pixel maps to (self.x, self.y).
     pub fn to_crop(&self, x: i32, y: i32, width: u32, height: u32) -> Option<(u32, u32, u32, u32)> {
@@ -89,6 +99,30 @@ pub fn list_monitor_rects() -> Vec<VirtualScreen> {
     {
         vec![virtual_screen()]
     }
+}
+
+/// Prefer the monitor with the largest overlap for a screen-space rect.
+/// Falls back to the monitor containing the top-left, then index 0.
+pub fn monitor_index_for_rect(x: i32, y: i32, width: u32, height: u32) -> u32 {
+    let rects = list_monitor_rects();
+    let mut best_idx = 0u32;
+    let mut best_area = 0i64;
+    for (idx, r) in rects.iter().enumerate() {
+        let area = r.intersection_area(x, y, width, height);
+        if area > best_area {
+            best_area = area;
+            best_idx = idx as u32;
+        }
+    }
+    if best_area > 0 {
+        return best_idx;
+    }
+    for (idx, r) in rects.iter().enumerate() {
+        if r.contains_point(x, y) {
+            return idx as u32;
+        }
+    }
+    0
 }
 
 #[derive(Debug, Clone, Copy, Serialize, Deserialize)]

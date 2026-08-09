@@ -14,8 +14,8 @@ pub use backend::{
 };
 pub use composite::{composite_webcam_pip, swap_rb_inplace};
 pub use desktop::{
-    cursor_position, list_monitor_rects, list_windows, virtual_screen, window_by_id, ScreenPoint,
-    VirtualScreen,
+    cursor_position, list_monitor_rects, list_windows, monitor_index_for_rect, virtual_screen,
+    window_by_id, ScreenPoint, VirtualScreen,
 };
 pub use pick::{capture_window_by_id, window_under_cursor};
 pub use preview::{capture_preview_frame, release_preview_session};

@@ -174,6 +174,14 @@ const I: Record<string, IconPath> = {
     "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-6h2Zm0-8h-2V7h2Z",
 };
 
+function isWindowPickerLabel(l: string) {
+  return l === "picker" || l.startsWith("picker-");
+}
+
+function isRegionPickerLabel(l: string) {
+  return l === "region-picker" || l.startsWith("region-picker-");
+}
+
 export default function App() {
   const [label, setLabel] = useState<string | null>(null);
 
@@ -187,7 +195,7 @@ export default function App() {
         setLabel(l);
         document.documentElement.classList.toggle(
           "picker-mode",
-          l === "picker" || l === "region-picker",
+          isWindowPickerLabel(l) || isRegionPickerLabel(l),
         );
         document.documentElement.classList.toggle(
           "record-overlay-mode",
@@ -208,8 +216,8 @@ export default function App() {
   }, []);
 
   if (label === "record-overlay") return <RecordOverlayRuntime />;
-  if (label === "picker") return <WindowPickerOverlay />;
-  if (label === "region-picker") {
+  if (label && isWindowPickerLabel(label)) return <WindowPickerOverlay />;
+  if (label && isRegionPickerLabel(label)) {
     return (
       <RegionSelector
         standalone

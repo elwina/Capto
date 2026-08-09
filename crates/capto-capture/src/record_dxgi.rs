@@ -88,7 +88,7 @@ impl Drop for DxgiRecordPump {
 #[cfg(windows)]
 mod windows_impl {
     use super::*;
-    use crate::{list_monitor_rects, window_by_id, Frame, VirtualScreen};
+    use crate::{list_monitor_rects, monitor_index_for_rect, window_by_id, Frame, VirtualScreen};
     use std::time::{Duration, Instant};
     use windows::Win32::Graphics::Gdi::{
         CreateCompatibleDC, CreateDIBSection, DeleteDC, DeleteObject, SelectObject, BITMAPINFO,
@@ -248,16 +248,6 @@ mod windows_impl {
         })
     }
 
-    fn display_for_point(x: i32, y: i32) -> Result<u32> {
-        let rects = list_monitor_rects();
-        for (idx, r) in rects.iter().enumerate() {
-            if x >= r.x && y >= r.y && x < r.x + r.width as i32 && y < r.y + r.height as i32 {
-                return Ok(idx as u32);
-            }
-        }
-        Ok(0)
-    }
-
     fn resolve_target(target: &CaptureTarget) -> Result<(u32, i32, i32, u32, u32)> {
         match target {
             CaptureTarget::Display { id } => {
@@ -270,13 +260,13 @@ mod windows_impl {
                 width,
                 height,
             } => {
-                let id = display_for_point(*x, *y)?;
+                let id = monitor_index_for_rect(*x, *y, *width, *height);
                 Ok((id, *x, *y, *width, *height))
             }
             CaptureTarget::Window { id } => {
                 let w = window_by_id(*id)?
                     .ok_or_else(|| CaptureError::WindowNotFound(id.to_string()))?;
-                let id = display_for_point(w.x, w.y)?;
+                let id = monitor_index_for_rect(w.x, w.y, w.width, w.height);
                 Ok((id, w.x, w.y, w.width, w.height))
             }
         }
