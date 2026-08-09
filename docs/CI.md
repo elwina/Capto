@@ -6,6 +6,7 @@
 |----------|------|---------|---------|
 | **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR → `main` | Rust test + clippy, frontend `tsc`, `cargo check` for **x64 + ARM64**, FFmpeg pin download + attestation |
 | **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg + CLI (`cli/capto.exe`); signed updater artifacts + rolling `updater` manifest |
+| **Website** | [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) | push `website/**` → `main`, or manual | Deploy static `website/` to GitHub Pages (`https://elwina.github.io/Capto/`) |
 
 CI and Release are intentionally separate: green CI does not publish; Release does not replace day-to-day checks.
 

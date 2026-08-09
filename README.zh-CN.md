@@ -11,7 +11,7 @@
 
 <p align="center">
   <a href="README.md">English</a> ·
-  <a href="website/index.html">Website</a> ·
+  <a href="https://elwina.github.io/Capto/">Website</a> ·
   <a href="https://github.com/elwina/Capto/releases">Releases</a>
 </p>
 

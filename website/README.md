@@ -10,6 +10,8 @@ start website/index.html
 npx --yes serve website
 ```
 
-GitHub Pages: point the Pages source at `/website` (or copy into `gh-pages`).
+Live site: [https://elwina.github.io/Capto/](https://elwina.github.io/Capto/)
+
+Deployed by [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) (GitHub Pages → **GitHub Actions**). Push to `main` under `website/`, or run the workflow manually.
 
 Assets under `assets/` (mark + optional donate QR). Brand color is Capto purple on purpose.
