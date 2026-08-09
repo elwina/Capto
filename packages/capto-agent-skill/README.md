@@ -22,11 +22,12 @@ Reference contract: `skills/capto/references/cli.md`.
 
 - Windows Capto desktop with bundled FFmpeg
 - `capto` on `PATH`, or in-repo: `cargo run -p capto-cli -- …`
-- Dev auto-launch: set `CAPTO_APP_PATH` to `capto-app.exe` if needed
+- Dev: set `CAPTO_APP_PATH` to `capto-app.exe` if needed
+- If exit code `2`: run `capto open`, or ask the user to open Capto from the Start menu
 
 ## Publish checklist (maintainers)
 
-Skill npm version is **independent** of Capto app releases (`0.1.0` skill ≠ Capto `0.2.0`).
+Skill npm version usually tracks Capto app releases when CLI/skill contracts change together (e.g. both `0.3.0`).
 
 > **Publish path:** `package.json` lives in `packages/capto-agent-skill/` (not repo root, not `skills/capto/`).  
 > Publishing from the Capto monorepo root hits the private `capto-workspace` package and will fail.

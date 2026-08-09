@@ -113,7 +113,7 @@ fn build_record_args_windows(
         "-y".into(),
         "-hide_banner".into(),
         "-loglevel".into(),
-        "error".into(),
+        "warning".into(),
         "-thread_queue_size".into(),
         "512".into(),
     ];

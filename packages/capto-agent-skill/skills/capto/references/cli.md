@@ -33,6 +33,7 @@ Lockfile: `%APPDATA%\Capto\cli-server.json` (`pid`, `port`, `token`, `version`).
 
 | Command | Purpose |
 |---------|---------|
+| `open` | Open Capto desktop only (no control-plane wait); use when exit `2` |
 | `doctor` | FFmpeg / backend / control plane |
 | `status` | Session snapshot (`idle` / `starting` / `recording` / `paused` / `stopping`) |
 | `list displays\|windows\|audio\|encoders` | Discovery |
@@ -40,6 +41,17 @@ Lockfile: `%APPDATA%\Capto\cli-server.json` (`pid`, `port`, `token`, `version`).
 | `shot` | Screenshot → `data.path` |
 | `record start\|stop\|pause\|resume` | Recording |
 | `outputs recent\|open` | Recent files / open folder |
+
+### Desktop unavailable (exit 2)
+
+1. `capto open`
+2. Wait a few seconds → retry `capto status`
+3. If still failing: ask the user to open **Capto** from the Start menu, then retry
+
+```powershell
+# equivalent fallback
+Start-Process "$env:LOCALAPPDATA\Capto\capto-app.exe"
+```
 
 ### `record start` flags
 
@@ -74,7 +86,8 @@ cargo build -p capto-app                  # desktop executable
 
 Desktop package is `capto-app` so it does not overwrite CLI `capto.exe` in `target/debug`. Installed layout uses `cli\capto.exe` because Windows cannot place `capto.exe` beside `Capto.exe`.
 
-Dev: `$env:CAPTO_APP_PATH = "<repo>/target/debug/capto-app.exe"` when auto-launch cannot find Capto.
+Dev: `$env:CAPTO_APP_PATH = "<repo>\target\debug\capto-app.exe"` when auto-launch cannot find Capto (plain path; avoid `\\?\`).
+Installed layout: `%LOCALAPPDATA%\Capto\capto-app.exe` with CLI at `%LOCALAPPDATA%\Capto\cli\capto.exe`.
 
 ## Safety
 

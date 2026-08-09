@@ -55,7 +55,7 @@ Dev auto-launch:
 $env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto-app.exe"
 ```
 
-Lookup order: `CAPTO_APP_PATH` → `Capto.exe` / `capto-app.exe` beside CLI or one level up (`cli\`) → `target/debug|release/capto-app.exe` → common install paths.
+Use a plain filesystem path (not a `\\?\` verbatim path). Lookup order: `CAPTO_APP_PATH` → `Capto.exe` / `capto-app.exe` beside CLI or one level up (`cli\`) → `target/debug|release/capto-app.exe` → `%LOCALAPPDATA%\Capto\` / Program Files.
 
 ## JSON envelope (agent contract)
 
@@ -90,6 +90,14 @@ Lookup order: `CAPTO_APP_PATH` → `Capto.exe` / `capto-app.exe` beside CLI or o
 Branch on **exit code first**, then `error.code`.
 
 ## Commands
+
+### `open`
+
+```bash
+capto open
+```
+
+Opens the Capto desktop only (does not wait for the control plane). Use when other commands return exit `2` / `desktopUnavailable`. If this still fails, ask the user to start **Capto** from the Start menu.
 
 ### `doctor`
 
@@ -288,6 +296,7 @@ $env:CAPTO_APP_PATH = "…\target\debug\capto-app.exe"
 
 | 命令 | 作用 |
 |------|------|
+| `open` | 仅打开桌面端（不等控制面）；exit `2` 时先用这个，仍失败则请用户手动打开 Capto |
 | `doctor` | 环境 / FFmpeg / 控制面 |
 | `status` | 会话状态 |
 | `list displays\|windows\|audio\|encoders` | 枚举设备 |
@@ -296,7 +305,7 @@ $env:CAPTO_APP_PATH = "…\target\debug\capto-app.exe"
 | `record start\|stop\|pause\|resume` | 录制 |
 | `outputs recent\|open` | 最近文件 / 打开目录 |
 
-典型录制流程：`doctor` → `list displays` → `record start` → `status` → `record stop` → `outputs recent`。
+典型录制流程：`open`（若需要）→ `doctor` → `list displays` → `record start` → `status` → `record stop` → `outputs recent`。
 
 ## 安全注意
 

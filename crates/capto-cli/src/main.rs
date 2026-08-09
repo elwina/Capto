@@ -34,6 +34,8 @@ struct Cli {
 enum Commands {
     /// Session status
     Status,
+    /// Open Capto desktop (does not require control plane)
+    Open,
     /// Readiness / environment probe
     Doctor,
     /// Recording controls
@@ -192,16 +194,41 @@ async fn run(cli: Cli) -> Result<(), CliError> {
     let human = cli.human;
     let auto_launch = !cli.no_launch;
 
+    // `open` only starts the desktop app — no control-plane connection required.
+    if matches!(cli.command, Commands::Open) {
+        return match launch::open_desktop() {
+            Ok(path) => {
+                let data = json!({
+                    "path": path,
+                    "hint": "Wait a few seconds, then run `capto status`. If still unavailable, ask the user to open Capto."
+                });
+                emit_ok(data, human);
+                Ok(())
+            }
+            Err(e) => Err(CliError {
+                code: "desktopUnavailable".into(),
+                message: format!(
+                    "{e:#}. Ask the user to open Capto from the Start menu, then retry"
+                ),
+                exit_code: ExitCode::DesktopUnavailable,
+                human,
+            }),
+        };
+    }
+
     let client = client::ControlClient::connect(auto_launch)
         .await
         .map_err(|e| CliError {
             code: "desktopUnavailable".into(),
-            message: e.to_string(),
+            message: format!(
+                "{e:#}. Try `capto open`, or ask the user to open Capto, then retry"
+            ),
             exit_code: ExitCode::DesktopUnavailable,
             human,
         })?;
 
     let result = match cli.command {
+        Commands::Open => unreachable!("handled above"),
         Commands::Status => client.get("/v1/status").await,
         Commands::Doctor => client.get("/v1/doctor").await,
         Commands::Record { action } => match action {

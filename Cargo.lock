@@ -644,7 +644,7 @@ dependencies = [
 
 [[package]]
 name = "capto-app"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "axum",
  "capto-audio",
@@ -674,7 +674,7 @@ dependencies = [
 
 [[package]]
 name = "capto-audio"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "cpal",
  "serde",
@@ -685,7 +685,7 @@ dependencies = [
 
 [[package]]
 name = "capto-capture"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "capto-overlay",
  "image",
@@ -699,7 +699,7 @@ dependencies = [
 
 [[package]]
 name = "capto-cli"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "capto-core",
@@ -716,7 +716,7 @@ dependencies = [
 
 [[package]]
 name = "capto-core"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "anyhow",
  "capto-audio",
@@ -737,7 +737,7 @@ dependencies = [
 
 [[package]]
 name = "capto-encode"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "thiserror 2.0.19",
@@ -747,7 +747,7 @@ dependencies = [
 
 [[package]]
 name = "capto-hooks"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "thiserror 2.0.19",
@@ -756,7 +756,7 @@ dependencies = [
 
 [[package]]
 name = "capto-ipc"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "capto-core",
  "capto-encode",
@@ -770,7 +770,7 @@ dependencies = [
 
 [[package]]
 name = "capto-overlay"
-version = "0.2.0"
+version = "0.3.0"
 dependencies = [
  "serde",
  "thiserror 2.0.19",

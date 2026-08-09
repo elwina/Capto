@@ -28,8 +28,8 @@ impl ControlClient {
         if !auto_launch {
             bail!("Capto desktop control plane is not running (use without --no-launch to start it)");
         }
-        launch::spawn_capto().context("failed to launch Capto desktop")?;
-        wait_for_ready(Duration::from_secs(30)).await
+        let exe = launch::spawn_capto().context("failed to launch Capto desktop")?;
+        wait_for_ready(Duration::from_secs(45), &exe).await
     }
 
     async fn request(&self, method: reqwest::Method, path: &str, body: Option<Value>) -> Result<Value, HttpError> {
@@ -122,14 +122,17 @@ fn from_lock(lock: ServerLock) -> ControlClient {
     }
 }
 
-async fn wait_for_ready(timeout: Duration) -> Result<ControlClient> {
+async fn wait_for_ready(timeout: Duration, launched_exe: &std::path::Path) -> Result<ControlClient> {
     let start = std::time::Instant::now();
     loop {
         if let Some(client) = try_existing().await? {
             return Ok(client);
         }
         if start.elapsed() > timeout {
-            bail!("timed out waiting for Capto control plane (is Capto installed / CAPTO_APP_PATH set?)");
+            bail!(
+                "timed out waiting for Capto control plane after opening {}. Run `capto open`, or ask the user to start Capto from the Start menu, then retry",
+                launched_exe.display()
+            );
         }
         tokio::time::sleep(Duration::from_millis(250)).await;
     }

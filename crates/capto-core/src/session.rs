@@ -450,9 +450,18 @@ impl RecordingSession {
                 if encoder != VideoEncoderKind::Libx264 && req.format == OutputFormat::Mp4 =>
             {
                 tracing::warn!(%error, "encoder failed, falling back to libx264");
-                boot_pipeline(ffmpeg, &req, VideoEncoderKind::Libx264).await?
+                match boot_pipeline(ffmpeg, &req, VideoEncoderKind::Libx264).await {
+                    Ok(p) => p,
+                    Err(fallback_error) => {
+                        *self.last_error.lock().await = Some(fallback_error.to_string());
+                        return Err(fallback_error);
+                    }
+                }
             }
-            Err(error) => return Err(error),
+            Err(error) => {
+                *self.last_error.lock().await = Some(error.to_string());
+                return Err(error);
+            }
         };
 
         let hide_app = req.hide_app_while_recording;

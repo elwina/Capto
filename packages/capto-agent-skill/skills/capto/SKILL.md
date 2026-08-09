@@ -10,7 +10,7 @@ license: MIT
 compatibility: Requires Capto desktop on Windows (installer embeds FFmpeg + CLI on PATH); or cargo run -p capto-cli in a dev checkout
 metadata:
   author: elwina
-  version: "0.1.0"
+  version: "0.3.0"
   npm: capto-agent-skill
 ---
 
@@ -27,11 +27,28 @@ Capto is a **local-only** screen recorder. Agents control the **single** Capto d
 5. Never spawn system FFmpeg for Capto outputs; never add share/upload steps.
 6. Details: [references/cli.md](references/cli.md).
 
+## Desktop must be running
+
+Most commands talk to the Capto **desktop** control plane. If it is down:
+
+1. Run `capto open` (opens installed / discovered `capto-app.exe`).
+2. Wait ~3–5s, then `capto status` (or retry the original command).
+3. If still exit `2` / `desktopUnavailable`: **ask the user to open Capto** (Start menu → Capto), wait until the window is up, then retry. Do not loop forever.
+
+Optional Windows fallback (same idea as `capto open`):
+
+```powershell
+Start-Process "$env:LOCALAPPDATA\Capto\capto-app.exe"
+```
+
+`--no-launch` skips auto-start (use in CI). Default commands may auto-open the desktop; prefer explicit `capto open` + user prompt when that fails.
+
 ## Workflows
 
 ### Screenshot
 
 ```bash
+capto status || capto open
 capto shot --source display
 # → data.path (absolute PNG)
 ```
@@ -39,7 +56,7 @@ capto shot --source display
 ### Record
 
 ```bash
-capto doctor                    # optional
+capto doctor                    # optional; exit 2 → open / ask user
 capto list displays             # optional
 capto record start --source display
 capto status                    # poll
@@ -67,9 +84,11 @@ capto outputs recent --limit 10
 ## Flags
 
 - Default: JSON envelope on stdout
+- `capto open`: start desktop only (no control-plane wait)
+- Auto-launch (default on other commands): opens desktop if control plane is down
 - `--no-launch`: fail if Capto desktop is not already running
-- Dev: `$env:CAPTO_APP_PATH = "<repo>/target/debug/capto-app.exe"` if auto-launch cannot find the desktop
+- Dev: `$env:CAPTO_APP_PATH = "<repo>\target\debug\capto-app.exe"` if discovery fails (plain path; no `\\?\`)
 
 ## Out of scope
 
-No `capto quit` yet. Desktop binary is `capto-app` / installed `Capto.exe` — not the CLI.
+No `capto quit` yet. Desktop binary is `capto-app.exe` (product name Capto) — not the CLI `capto.exe`.

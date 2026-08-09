@@ -79,14 +79,18 @@ pub struct FfmpegEncoder {
 impl FfmpegEncoder {
     pub fn discover(sidecar_dir: Option<&Path>) -> Result<Self> {
         if let Some(p) = Self::resolve_binary(sidecar_dir) {
-            return Ok(Self { binary: p });
+            return Ok(Self {
+                binary: normalize_spawn_path(p),
+            });
         }
         Err(EncodeError::FfmpegNotFound)
     }
 
     /// Resolve only the bundled sidecar — never PATH / WinGet / system installs.
     pub fn resolve_binary(sidecar_dir: Option<&Path>) -> Option<PathBuf> {
-        sidecar_dir.and_then(find_ffmpeg_in_dir)
+        sidecar_dir
+            .and_then(find_ffmpeg_in_dir)
+            .map(normalize_spawn_path)
     }
 
     /// True if `dir` contains a usable bundled ffmpeg binary.
@@ -105,11 +109,7 @@ impl FfmpegEncoder {
             .stdin(Stdio::null())
             .stdout(Stdio::piped())
             .stderr(Stdio::piped());
-        #[cfg(windows)]
-        {
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
+        apply_no_window(&mut cmd);
         let output = cmd.output().await?;
         let stdout = String::from_utf8_lossy(&output.stdout);
         let stderr = String::from_utf8_lossy(&output.stderr);
@@ -125,18 +125,30 @@ impl FfmpegEncoder {
     }
 
     pub async fn probe_encoders(&self) -> Result<Vec<EncoderInfo>> {
-        let output = Command::new(&self.binary)
-            .args(["-hide_banner", "-encoders"])
-            .output()
-            .await?;
+        let mut cmd = Command::new(&self.binary);
+        cmd.args(["-hide_banner", "-encoders"])
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        apply_no_window(&mut cmd);
+        let output = cmd.output().await?;
 
         if !output.status.success() {
-            return Err(EncodeError::FfmpegFailed(
-                String::from_utf8_lossy(&output.stderr).into_owned(),
-            ));
+            let err = String::from_utf8_lossy(&output.stderr);
+            let out = String::from_utf8_lossy(&output.stdout);
+            let detail = [err.trim(), out.trim()]
+                .into_iter()
+                .find(|s| !s.is_empty())
+                .unwrap_or("ffmpeg -encoders failed with no output");
+            return Err(EncodeError::FfmpegFailed(detail.to_string()));
         }
 
-        let text = String::from_utf8_lossy(&output.stdout);
+        // FFmpeg historically printed the encoder list on stderr; keep both.
+        let text = format!(
+            "{}\n{}",
+            String::from_utf8_lossy(&output.stdout),
+            String::from_utf8_lossy(&output.stderr)
+        );
         let candidates = [
             VideoEncoderKind::H264Nvenc,
             VideoEncoderKind::H264Qsv,
@@ -191,13 +203,7 @@ impl FfmpegEncoder {
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .kill_on_drop(true);
-
-        // Prevent console-subsystem ffmpeg from misbehaving when spawned by a GUI app.
-        #[cfg(windows)]
-        {
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
+        apply_no_window(&mut cmd);
 
         let mut child = cmd.spawn()?;
 
@@ -237,11 +243,7 @@ impl FfmpegEncoder {
             .stdout(Stdio::null())
             .stderr(Stdio::piped())
             .kill_on_drop(true);
-        #[cfg(windows)]
-        {
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
+        apply_no_window(&mut cmd);
         let output = cmd.output().await?;
         if output.status.success() {
             return Ok(());
@@ -272,18 +274,24 @@ impl FfmpegEncoder {
             tokio::time::sleep(std::time::Duration::from_millis(100)).await;
             match child.try_wait() {
                 Ok(Some(status)) => {
-                    // Let the drain task catch up.
-                    tokio::time::sleep(std::time::Duration::from_millis(50)).await;
-                    let err = stderr_log.lock().await.clone();
-                    let err = err.trim();
+                    // Give the stderr drain task time to finish after exit.
+                    for _ in 0..10 {
+                        tokio::time::sleep(std::time::Duration::from_millis(30)).await;
+                        if !stderr_log.lock().await.trim().is_empty() {
+                            break;
+                        }
+                    }
+                    let err = summarize_ffmpeg_stderr(stderr_log.lock().await.trim());
                     let detail = if err.is_empty() {
-                        format!("ffmpeg exited immediately ({status})")
+                        format!(
+                            "ffmpeg exited immediately ({status}) with no stderr — restart Capto, then try encoder libx264 / disable mic & system audio"
+                        )
                     } else {
-                        format!("ffmpeg exited immediately ({status}): {err}")
+                        format!(
+                            "ffmpeg exited immediately ({status}): {err}. Try encoder libx264 / disable mic & system audio."
+                        )
                     };
-                    return Err(EncodeError::FfmpegFailed(format!(
-                        "{detail}. Try encoder libx264 / disable mic & system audio."
-                    )));
+                    return Err(EncodeError::FfmpegFailed(detail));
                 }
                 Ok(None) => {}
                 Err(e) => return Err(EncodeError::Io(e)),
@@ -387,11 +395,7 @@ impl FfmpegEncoder {
         ])
         .stdout(Stdio::null())
         .stderr(Stdio::piped());
-        #[cfg(windows)]
-        {
-            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
-            cmd.creation_flags(CREATE_NO_WINDOW);
-        }
+        apply_no_window(&mut cmd);
         let output = cmd.output().await?;
         let stderr = String::from_utf8_lossy(&output.stderr);
         Ok(parse_dshow_video_devices(&stderr))
@@ -510,14 +514,15 @@ pub fn parse_ffmpeg_version_token(version_line: &str) -> Option<String> {
 
 /// Prefer plain `ffmpeg(.exe)` (installed sidecar), then Tauri triple-suffixed names.
 fn find_ffmpeg_in_dir(dir: &Path) -> Option<PathBuf> {
+    let dir = normalize_spawn_path(dir.to_path_buf());
     for name in ["ffmpeg.exe", "ffmpeg"] {
         let candidate = dir.join(name);
         if candidate.is_file() {
-            return Some(candidate);
+            return Some(normalize_spawn_path(candidate));
         }
     }
 
-    let entries = std::fs::read_dir(dir).ok()?;
+    let entries = std::fs::read_dir(&dir).ok()?;
     let mut triple_hits: Vec<PathBuf> = entries
         .flatten()
         .map(|e| e.path())
@@ -532,7 +537,47 @@ fn find_ffmpeg_in_dir(dir: &Path) -> Option<PathBuf> {
         })
         .collect();
     triple_hits.sort();
-    triple_hits.into_iter().next()
+    triple_hits.into_iter().next().map(normalize_spawn_path)
+}
+
+/// Strip Windows verbatim (`\\?\`) prefixes so CreateProcess is reliable from GUI apps.
+fn normalize_spawn_path(path: PathBuf) -> PathBuf {
+    #[cfg(windows)]
+    {
+        let s = path.to_string_lossy();
+        if let Some(rest) = s.strip_prefix(r"\\?\UNC\") {
+            return PathBuf::from(format!(r"\\{rest}"));
+        }
+        if let Some(rest) = s.strip_prefix(r"\\?\") {
+            return PathBuf::from(rest);
+        }
+    }
+    path
+}
+
+fn apply_no_window(cmd: &mut Command) {
+    // Prevent console-subsystem ffmpeg from misbehaving when spawned by a GUI app.
+    #[cfg(windows)]
+    {
+        const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+        cmd.creation_flags(CREATE_NO_WINDOW);
+    }
+    let _ = cmd;
+}
+
+fn summarize_ffmpeg_stderr(err: &str) -> String {
+    let trimmed = err.trim();
+    if trimmed.is_empty() {
+        return String::new();
+    }
+    // Keep the last meaningful chunk; FFmpeg often prints a banner then the real error.
+    let lines: Vec<&str> = trimmed
+        .lines()
+        .map(str::trim)
+        .filter(|l| !l.is_empty())
+        .collect();
+    let take = lines.len().saturating_sub(8);
+    lines[take..].join(" | ")
 }
 
 #[cfg(test)]
@@ -566,6 +611,13 @@ mod tests {
             .to_string_lossy()
             .starts_with("ffmpeg-"));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[cfg(windows)]
+    #[test]
+    fn normalize_spawn_path_strips_verbatim_prefix() {
+        let p = normalize_spawn_path(PathBuf::from(r"\\?\C:\Capto\ffmpeg.exe"));
+        assert_eq!(p, PathBuf::from(r"C:\Capto\ffmpeg.exe"));
     }
 
     #[test]
