@@ -67,13 +67,18 @@ Desktop is **single-process only** via `tauri-plugin-single-instance` (registere
 
 ## CLI control plane
 
-`capto-cli` does **not** own a recording session. It talks to the running desktop over localhost HTTP:
+The **`capto`** CLI (crate `capto-cli`) does **not** own a recording session. It talks to the running desktop (`capto-app`) over localhost HTTP:
 
 1. Desktop binds `127.0.0.1:<ephemeral>` and writes `{config_dir}/Capto/cli-server.json` (`pid`, `port`, `token`, `version`).
 2. CLI reads the lock file, sends `Authorization: Bearer <token>`, calls `/v1/...`.
-3. If the plane is down, CLI spawns `Capto.exe` (or `CAPTO_APP_PATH`) and polls until ready. Single-instance ensures that spawn cannot create a second session.
+3. If the plane is down, CLI spawns the desktop (`CAPTO_APP_PATH` / `capto-app.exe` / installed Capto) and polls until ready. Single-instance ensures that spawn cannot create a second session.
 
-Shared types live in `capto-ipc`. Default CLI stdout is a JSON envelope `{ ok, data | error }`.
+CLI vs desktop binaries stay distinct (`capto` vs `capto-app`) so they do not overwrite each other in `target/debug` or collide on case-insensitive Windows paths.
+
+Shared types live in `capto-ipc`. Default CLI stdout is a JSON envelope `{ ok, data | error }` with stable exit codes.
+
+**Agent / command reference:** [CLI.md](CLI.md)  
+**npm Agent Skill:** [`capto-agent-skill`](../packages/capto-agent-skill) (`skills/capto`)
 
 Endpoints (v1): `status`, `doctor`, `config` (GET/PATCH), `config/path`, `record/start|stop|pause|resume`, `shot`, `list/{displays,windows,audio,encoders}`, `outputs/recent`, `outputs/open`.
 
@@ -87,3 +92,7 @@ Endpoints (v1): `status`, `doctor`, `config` (GET/PATCH), `config/path`, `record
 ## Cross-platform
 
 See [CROSS_PLATFORM.md](CROSS_PLATFORM.md) for macOS / Linux recording backend roadmap. Frame capture already uses `xcap` on all major desktop OSes.
+
+## CI / Release
+
+See [CI.md](CI.md) for GitHub Actions (CI vs Release, x64 + ARM64, FFmpeg pin from `elwina/capto-ffmpeg`).

@@ -1,0 +1,36 @@
+{
+  "name": "capto-agent-skill",
+  "version": "0.1.0",
+  "description": "Agent Skills package for driving Capto screen capture via the local `capto` CLI",
+  "license": "MIT",
+  "private": false,
+  "type": "module",
+  "files": [
+    "skills",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "agent-skill",
+    "agentskills",
+    "capto",
+    "screen-capture",
+    "cursor",
+    "claude-code"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elwina/Capto.git",
+    "directory": "packages/capto-agent-skill"
+  },
+  "bugs": {
+    "url": "https://github.com/elwina/Capto/issues"
+  },
+  "homepage": "https://github.com/elwina/Capto/tree/main/packages/capto-agent-skill",
+  "engines": {
+    "node": ">=18"
+  },
+  "publishConfig": {
+    "access": "public"
+  }
+}

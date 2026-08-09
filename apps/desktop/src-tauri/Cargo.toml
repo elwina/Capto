@@ -1,5 +1,5 @@
 [package]
-name = "capto"
+name = "capto-app"
 version.workspace = true
 description = "Capto desktop shell"
 authors.workspace = true

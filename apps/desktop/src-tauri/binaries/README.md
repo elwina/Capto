@@ -37,9 +37,10 @@ Do **not** commit the binary (see root `.gitignore`).
 
 ## Release
 
-GitHub Actions must run `scripts/download-ffmpeg.ps1` for the build target before
-Tauri packages the app. The installer embeds that verified sidecar; end users do
-not install FFmpeg separately.
+GitHub Actions **Release** workflow runs `scripts/download-ffmpeg.ps1` for each target
+(`x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`) before Tauri packages the app.
+Pin and provenance: `.github/capto-ffmpeg.env` + [docs/CI.md](../../../docs/CI.md).
+The installer embeds that verified sidecar; end users do not install FFmpeg separately.
 
 ## Suggested capabilities
 

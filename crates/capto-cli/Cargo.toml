@@ -6,7 +6,7 @@ license.workspace = true
 description = "Capto command-line interface (controls desktop via local HTTP)"
 
 [[bin]]
-name = "capto-cli"
+name = "capto"
 path = "src/main.rs"
 
 [dependencies]

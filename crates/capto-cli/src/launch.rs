@@ -4,7 +4,7 @@ use std::process::Command;
 
 /// Locate and spawn Capto desktop. Single-instance plugin ensures at most one process.
 pub fn spawn_capto() -> Result<()> {
-    let exe = find_capto_exe().context("Capto.exe not found")?;
+    let exe = find_capto_exe().context("Capto desktop executable not found")?;
     tracing::info!(path = %exe.display(), "launching Capto desktop");
     let mut cmd = Command::new(&exe);
     #[cfg(windows)]
@@ -30,29 +30,27 @@ fn find_capto_exe() -> Result<PathBuf> {
 
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
+            // Installed / side-by-side names (desktop is NOT the CLI binary).
             candidates.push(dir.join("Capto.exe"));
-            candidates.push(dir.join("capto.exe"));
-            // cargo run -p capto-cli from workspace: target/debug/capto-cli.exe
-            candidates.push(dir.join("capto.exe"));
-            candidates.push(dir.join("../debug/capto.exe"));
-            candidates.push(dir.join("../release/capto.exe"));
+            candidates.push(dir.join("capto-app.exe"));
+            candidates.push(dir.join("../debug/capto-app.exe"));
+            candidates.push(dir.join("../release/capto-app.exe"));
         }
     }
 
-    // Dev workspace layout from this crate
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
-    candidates.push(manifest.join("../../target/debug/capto.exe"));
-    candidates.push(manifest.join("../../target/release/capto.exe"));
+    candidates.push(manifest.join("../../target/debug/capto-app.exe"));
+    candidates.push(manifest.join("../../target/release/capto-app.exe"));
     candidates.push(
-        manifest.join("../../apps/desktop/src-tauri/target/debug/capto.exe"),
+        manifest.join("../../apps/desktop/src-tauri/target/debug/capto-app.exe"),
     );
     candidates.push(
-        manifest.join("../../apps/desktop/src-tauri/target/release/capto.exe"),
+        manifest.join("../../apps/desktop/src-tauri/target/release/capto-app.exe"),
     );
 
-    // Common Windows install locations
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
-        candidates.push(PathBuf::from(local).join("Capto/Capto.exe"));
+        candidates.push(PathBuf::from(&local).join("Capto/Capto.exe"));
+        candidates.push(PathBuf::from(local).join("Capto/capto-app.exe"));
     }
     if let Ok(pf) = std::env::var("ProgramFiles") {
         candidates.push(PathBuf::from(pf).join("Capto/Capto.exe"));
@@ -69,7 +67,7 @@ fn find_capto_exe() -> Result<PathBuf> {
     }
 
     bail!(
-        "could not find Capto.exe — set CAPTO_APP_PATH or build the desktop app (`cargo build -p capto`)"
+        "could not find Capto desktop — set CAPTO_APP_PATH or build with `cargo build -p capto-app`"
     );
 }
 

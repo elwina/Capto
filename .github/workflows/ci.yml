@@ -1,0 +1,108 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+  attestations: read
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  rust:
+    name: Rust test / clippy
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy
+
+      - name: Cache Cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+
+      - name: cargo test --workspace
+        run: cargo test --workspace --all-targets
+
+      - name: cargo clippy --workspace
+        # Warn-only for now; tighten to `-D warnings` once the workspace is clean.
+        run: cargo clippy --workspace --all-targets
+
+  frontend:
+    name: Frontend typecheck
+    runs-on: windows-latest
+    defaults:
+      run:
+        working-directory: apps/desktop
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - run: npm ci
+      - run: npx tsc --noEmit
+
+  check-targets:
+    name: Check ${{ matrix.target }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+          - target: aarch64-pc-windows-msvc
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: check-${{ matrix.target }}
+
+      - name: Download Capto FFmpeg (${{ matrix.target }})
+        shell: pwsh
+        env:
+          CAPTO_FFMPEG_VERIFY_ATTESTATION: "1"
+        run: |
+          .\scripts\download-ffmpeg.ps1 -TargetTriple "${{ matrix.target }}" -VerifyAttestation
+          $path = "apps/desktop/src-tauri/binaries/ffmpeg-${{ matrix.target }}.exe"
+          if (-not (Test-Path $path)) { throw "missing $path" }
+          Write-Host "OK $path ($((Get-Item $path).Length) bytes)"
+
+      - name: cargo check (desktop + cli)
+        run: |
+          cargo check -p capto-app -p capto-cli --target ${{ matrix.target }}
+
+  skill-pack:
+    name: Agent skill package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+      - name: npm pack dry-run
+        run: npm pack ./packages/capto-agent-skill --dry-run

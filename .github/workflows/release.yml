@@ -1,0 +1,129 @@
+name: Release
+
+# Builds signed-ready Windows installers (x64 + ARM64) with FFmpeg embedded
+# from elwina/capto-ffmpeg releases (SHA-256 + optional attestation).
+# Separate from CI — run on version tags or manually.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+    inputs:
+      draft:
+        description: "Create draft GitHub release"
+        type: boolean
+        default: true
+
+permissions:
+  contents: write
+  id-token: write
+  attestations: read # verify elwina/capto-ffmpeg Artifact Attestations
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release:
+    name: Release ${{ matrix.target }}
+    runs-on: windows-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: x86_64-pc-windows-msvc
+            bundles: nsis
+          - target: aarch64-pc-windows-msvc
+            # MSI does not support Windows ARM64; NSIS only.
+            bundles: nsis
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: lts/*
+          cache: npm
+          cache-dependency-path: apps/desktop/package-lock.json
+
+      - name: Install Rust stable
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: ${{ matrix.target }}
+
+      - name: Cache Cargo
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: ". -> target"
+          key: release-${{ matrix.target }}
+
+      - name: Install frontend deps
+        working-directory: apps/desktop
+        run: npm ci
+
+      - name: Download Capto FFmpeg (${{ matrix.target }})
+        shell: pwsh
+        env:
+          CAPTO_FFMPEG_VERIFY_ATTESTATION: "1"
+        run: |
+          .\scripts\download-ffmpeg.ps1 -TargetTriple "${{ matrix.target }}" -VerifyAttestation
+          Get-Item "apps/desktop/src-tauri/binaries/ffmpeg-${{ matrix.target }}.exe" | Format-List Name, Length
+
+      - name: Build CLI (`capto`)
+        run: cargo build -p capto-cli --release --target ${{ matrix.target }}
+
+      - name: Upload CLI artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: capto-cli-${{ matrix.target }}
+          path: target/${{ matrix.target }}/release/capto.exe
+          if-no-files-found: error
+
+      - name: Build Tauri installer
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectPath: apps/desktop
+          tagName: v__VERSION__
+          releaseName: Capto v__VERSION__
+          releaseBody: |
+            Capto **v__VERSION__** (Windows).
+
+            - Bundled FFmpeg from [`elwina/capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) (SHA-256 verified; see `.github/capto-ffmpeg.env`)
+            - Architectures: `x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`
+            - CLI binary `capto.exe` is attached as a workflow artifact / release asset when published
+
+            Install the NSIS setup matching your CPU. ARM64 uses NSIS only (no MSI).
+          releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
+          prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
+          args: --target ${{ matrix.target }} --bundles ${{ matrix.bundles }}
+
+  attach-cli:
+    name: Attach CLI to release
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+
+      - name: Rename CLI assets
+        run: |
+          mkdir -p out
+          cp artifacts/capto-cli-x86_64-pc-windows-msvc/capto.exe out/capto-windows-x86_64.exe
+          cp artifacts/capto-cli-aarch64-pc-windows-msvc/capto.exe out/capto-windows-aarch64.exe
+          ls -la out
+
+      - name: Upload CLI to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            out/capto-windows-x86_64.exe
+            out/capto-windows-aarch64.exe
+          fail_on_unmatched_files: true

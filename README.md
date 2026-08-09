@@ -22,7 +22,7 @@
 ### P1
 
 - Overlay：图片 / 文字静态烧录
-- CLI：经本机 HTTP 控制桌面（`status` / `record` / `shot` / `config` / `list` / `outputs` / `doctor`），默认 JSON，可自动拉起 Capto
+- CLI：二进制 `capto` 经本机 HTTP 控制桌面（`status` / `record` / `shot` / `config` / `list` / `outputs` / `doctor`），默认 JSON，可自动拉起 Capto；Agent Skill 包 `capto-agent-skill`
 - 热键自定义设置 UI（默认四键已注册）
 - 桌面单实例（二次启动只聚焦已有进程）
 
@@ -46,18 +46,27 @@ npm run tauri --prefix apps/desktop -- dev
 # 测试
 cargo test --workspace
 
-# CLI（控制正在运行的桌面会话；未开则自动启动）
+# CLI（二进制名 `capto`；控制桌面会话，未开则自动启动）
 cargo run -p capto-cli -- status
 cargo run -p capto-cli -- list displays
 cargo run -p capto-cli -- config get fps
 cargo run -p capto-cli -- record start --source display
 cargo run -p capto-cli -- record stop
 cargo run -p capto-cli -- outputs recent --limit 5
-# 开发时若找不到 Capto.exe：
-# $env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto.exe"
+# 开发时若找不到桌面：
+# $env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto-app.exe"
 ```
 
-详见 [AGENTS.md](AGENTS.md) 与 [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)。
+**文档**
+
+| 文档 | 内容 |
+|------|------|
+| [AGENTS.md](AGENTS.md) | 仓库约定、agent 边界、二进制命名 |
+| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 录制管线、单实例、控制面 |
+| [docs/CLI.md](docs/CLI.md) | CLI 命令、JSON/退出码、agent 工作流 |
+| [docs/CROSS_PLATFORM.md](docs/CROSS_PLATFORM.md) | macOS / Linux 后端路线 |
+| [docs/CI.md](docs/CI.md) | GitHub Actions：CI 与 Release（x64 + ARM64，FFmpeg 来自 capto-ffmpeg） |
+| [packages/capto-agent-skill](packages/capto-agent-skill) | 可发布到 npm 的 Agent Skill（`capto-agent-skill`） |
 
 ## 许可
 

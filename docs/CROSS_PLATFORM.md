@@ -4,7 +4,7 @@
 
 | OS | Screenshots / window list | Continuous recording |
 |----|---------------------------|----------------------|
-| Windows | Screenshots: `xcap`; **live preview: DXGI Desktop Duplication** (no GDI cursor flicker) | FFmpeg `gdigrab` + WASAPI → FFmpeg |
+| Windows | Screenshots: `xcap`; **live preview: DXGI Desktop Duplication** (no GDI cursor flicker) | DXGI record pump → FFmpeg (`rawvideo` pipe) + WASAPI → FFmpeg; encode via `capto-encode` |
 | macOS | `xcap` (ScreenCaptureKit path) | Stub / lavfi placeholder until avfoundation wiring |
 | Linux | `xcap` | Stub until PipeWire / x11grab wiring |
 

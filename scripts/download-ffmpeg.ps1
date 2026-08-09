@@ -8,14 +8,41 @@
 #   .\scripts\download-ffmpeg.ps1
 #   .\scripts\download-ffmpeg.ps1 -TargetTriple aarch64-pc-windows-msvc
 #   .\scripts\download-ffmpeg.ps1 -Tag v0.1.0-n9.0
+#
+# Pin defaults live in `.github/capto-ffmpeg.env` (overridable via env / params).
 
 param(
     [string]$TargetTriple = "",
-    [string]$Tag = "v0.1.0-n9.0",
-    [string]$Repository = "elwina/capto-ffmpeg"
+    [string]$Tag = "",
+    [string]$Repository = "",
+    [switch]$VerifyAttestation
 )
 
 $ErrorActionPreference = "Stop"
+
+function Read-PinnedEnv {
+    $path = Join-Path (Split-Path -Parent $PSScriptRoot) ".github\capto-ffmpeg.env"
+    $map = @{}
+    if (Test-Path -LiteralPath $path) {
+        Get-Content -LiteralPath $path | ForEach-Object {
+            $line = $_.Trim()
+            if (-not $line -or $line.StartsWith("#")) { return }
+            $parts = $line -split "=", 2
+            if ($parts.Count -eq 2) {
+                $map[$parts[0].Trim()] = $parts[1].Trim()
+            }
+        }
+    }
+    return $map
+}
+
+$pinned = Read-PinnedEnv
+if (-not $Repository) {
+    $Repository = if ($env:CAPTO_FFMPEG_REPO) { $env:CAPTO_FFMPEG_REPO } elseif ($pinned["CAPTO_FFMPEG_REPO"]) { $pinned["CAPTO_FFMPEG_REPO"] } else { "elwina/capto-ffmpeg" }
+}
+if (-not $Tag) {
+    $Tag = if ($env:CAPTO_FFMPEG_TAG) { $env:CAPTO_FFMPEG_TAG } elseif ($pinned["CAPTO_FFMPEG_TAG"]) { $pinned["CAPTO_FFMPEG_TAG"] } else { "v0.1.0-n9.0" }
+}
 
 if (-not $TargetTriple) {
     $TargetTriple = (& rustc --print host-tuple 2>$null | Select-Object -First 1).Trim()
@@ -56,6 +83,17 @@ try {
     $actualHash = (Get-FileHash -Algorithm SHA256 -LiteralPath $downloaded).Hash.ToUpperInvariant()
     if ($actualHash -ne $expectedHash) {
         throw "SHA-256 mismatch for $asset. Expected $expectedHash, got $actualHash."
+    }
+
+    if ($VerifyAttestation -or $env:CAPTO_FFMPEG_VERIFY_ATTESTATION -eq "1") {
+        if (Get-Command gh -ErrorAction SilentlyContinue) {
+            & gh attestation verify $downloaded -R $Repository
+            if ($LASTEXITCODE -ne 0) {
+                throw "Attestation verification failed for $asset"
+            }
+        } else {
+            Write-Warning "gh not found; skipping attestation verify (SHA-256 still checked)."
+        }
     }
 
     New-Item -ItemType Directory -Force -Path $binDir | Out-Null

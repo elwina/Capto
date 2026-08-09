@@ -10,6 +10,16 @@ Stack: **Tauri 2 + Rust + React/TypeScript**. No C#. No cloud upload.
 3. **New capture backends must implement `CaptureBackend`** in `capto-capture`.
 4. **Windows first** — ship WGC/WASAPI path; macOS/Linux backends are stubs until implemented.
 5. **UI does not process frames** — React only sends intents and renders state.
+6. **CLI controls the desktop session** — binary `capto` (crate `capto-cli`) must not create a second `RecordingSession`; use the localhost control plane ([docs/CLI.md](docs/CLI.md)).
+
+## Binaries
+
+| Binary | Crate / package | Role |
+|--------|-----------------|------|
+| `capto` | `capto-cli` | Agent/CLI control plane client |
+| `capto-app` | `capto-app` (Tauri) | Desktop UI; product name **Capto** |
+
+Do not name both `capto` — they would clash in `target/debug` and on case-insensitive Windows paths.
 
 ## Repo layout
 
@@ -23,35 +33,59 @@ Stack: **Tauri 2 + Rust + React/TypeScript**. No C#. No cloud upload.
 | `crates/capto-overlay` | Overlay layout / compositor helpers |
 | `crates/capto-hooks` | Hotkey / input hook abstractions |
 | `crates/capto-ipc` | Local CLI↔desktop control-plane types + lockfile |
-| `crates/capto-cli` | CLI client for the desktop control plane |
-| `docs/ARCHITECTURE.md` | Pipeline contracts |
+| `crates/capto-cli` | CLI client (`capto` binary) |
+| `packages/capto-agent-skill` | Publishable Agent Skills npm package |
+| `docs/ARCHITECTURE.md` | Pipeline + control-plane contracts |
+| `docs/CLI.md` | CLI / agent JSON contract |
 
 ## Cloud vs local Windows
 
 | Task | Cloud agent | Local Windows |
 |------|-------------|---------------|
-| Traits, UI, i18n, CLI, unit tests | Yes | Optional |
+| Traits, UI, i18n, CLI client code, unit tests | Yes | Optional |
 | WGC / WASAPI / NVENC real recording | No | **Required** |
 | Package installers | CI Windows runner | Verify locally |
+| Live `capto` against desktop | No (no display session) | Yes |
+
+## Driving Capto from an agent
+
+1. Read [docs/CLI.md](docs/CLI.md) (envelope, exit codes, workflows).
+2. Prefer skill **`capto`** from npm package [`capto-agent-skill`](packages/capto-agent-skill) (`skills/capto`).
+3. Typical loop: `doctor` / `list` → `record start` → poll `status` → `record stop` → `outputs recent`.
+4. Parse JSON stdout; branch on exit codes (`2` = desktop unavailable).
+5. Dev auto-launch: `CAPTO_APP_PATH` → `target/debug/capto-app.exe`.
+
+```bash
+capto status
+# or from repo:
+cargo run -p capto-cli -- status
+```
 
 ## Dev commands
 
 ```bash
 npm install --prefix apps/desktop
 cargo test --workspace
-npm run tauri --prefix apps/desktop -- dev
-cargo run -p capto-cli -- --help
+npm run tauri --prefix apps/desktop -- dev   # builds capto-app
+cargo run -p capto-cli -- doctor             # runs `capto`
 ```
 
-Place a local FFmpeg into the app bundle (no download):
+Place a local FFmpeg into the app bundle:
 
 ```bash
-# PowerShell — copies from PATH / FFMPEG_PATH / -Source
 .\scripts\copy-ffmpeg.ps1
 ```
 
-See `apps/desktop/src-tauri/binaries/README.md`. Runtime uses **only** that bundled binary.
+See `apps/desktop/src-tauri/binaries/README.md`.
 
 ## Feature matrix
 
 See root `README.md`. P0 = MVP, P1 = next, cut list is permanent.
+
+## CI / Release
+
+See [docs/CI.md](docs/CI.md). Summary:
+
+- **CI** (`.github/workflows/ci.yml`): tests on push/PR — not a publisher
+- **Release** (`.github/workflows/release.yml`): tag `v*` → Windows NSIS for x64 + ARM64 with FFmpeg from `elwina/capto-ffmpeg` (pin in `.github/capto-ffmpeg.env`)
+- Current app version **0.1.0**; treat `v0.*` as prerelease until **1.0.0**
