@@ -3,6 +3,7 @@
   "version": "0.2.0",
   "description": "Agent Skills package for driving Capto screen capture via the local `capto` CLI",
   "license": "MIT",
+  "author": "Elwina Vardal",
   "private": false,
   "type": "module",
   "files": [
@@ -15,6 +16,8 @@
     "agentskills",
     "capto",
     "screen-capture",
+    "screen-recorder",
+    "windows",
     "cursor",
     "claude-code"
   ],

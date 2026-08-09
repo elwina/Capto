@@ -34,7 +34,7 @@ Lockfile: `%APPDATA%\Capto\cli-server.json` (`pid`, `port`, `token`, `version`).
 | Command | Purpose |
 |---------|---------|
 | `doctor` | FFmpeg / backend / control plane |
-| `status` | Session snapshot (`idle` / `recording` / `paused` / …) |
+| `status` | Session snapshot (`idle` / `starting` / `recording` / `paused` / `stopping`) |
 | `list displays\|windows\|audio\|encoders` | Discovery |
 | `config get [key]` / `set` / `path` | Settings (camelCase keys) |
 | `shot` | Screenshot → `data.path` |
@@ -47,6 +47,14 @@ Lockfile: `%APPDATA%\Capto\cli-server.json` (`pid`, `port`, `token`, `version`).
 
 Always `record stop` when finished (no CLI duration auto-stop).
 
+### `outputs`
+
+```bash
+capto outputs recent --limit 10
+capto outputs open --last
+capto outputs open --folder
+```
+
 ### Global flags
 
 - Default: JSON envelope on stdout
@@ -55,7 +63,7 @@ Always `record stop` when finished (no CLI duration auto-stop).
 
 ## Install / path
 
-Capto installer embeds the CLI at `<install>\cli\capto.exe` and adds that folder to the user **PATH** (open a new terminal after install). Not a separate Release download.
+Capto installer embeds the CLI at `<install>\cli\capto.exe` and adds that folder to the user **PATH** (open a **new** terminal after install). Not a separate Release download.
 
 ## Repo / cargo
 

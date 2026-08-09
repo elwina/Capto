@@ -7,7 +7,7 @@ description: >-
   encoders, or finding recent Capto output files. Prefer `capto` over spawning
   system FFmpeg.
 license: MIT
-compatibility: Requires Capto desktop on Windows (installer embeds FFmpeg + CLI and adds cli\ to PATH); or cargo run -p capto-cli in a dev checkout
+compatibility: Requires Capto desktop on Windows (installer embeds FFmpeg + CLI on PATH); or cargo run -p capto-cli in a dev checkout
 metadata:
   author: elwina
   version: "0.2.0"
