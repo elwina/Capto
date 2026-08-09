@@ -143,7 +143,7 @@ export function RegionSelector({
                   else onCancel();
                 }}
               >
-                Esc
+                {t("cancel")}
               </button>
               <span className="region-size mono">
                 {committedScreen.width}×{committedScreen.height}
@@ -152,7 +152,7 @@ export function RegionSelector({
           )}
         </div>
       )}
-      {!committedClient && <div className="region-hint">{t("selectRegion")} (Esc)</div>}
+      {!committedClient && <div className="region-hint">{t("selectRegionHint")}</div>}
     </div>
   );
 }

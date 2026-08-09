@@ -13,7 +13,7 @@ import { useWebcamPreview } from "./hooks/useWebcamPreview";
 import { usePreviewFrame } from "./hooks/usePreviewFrame";
 import { RegionSelector } from "./components/RegionSelector";
 import { WindowPickerOverlay, type PickedWindow } from "./components/WindowPickerOverlay";
-import i18n from "./i18n";
+import i18n, { SUPPORTED_LOCALES } from "./i18n";
 
 type VideoSource = "display" | "window" | "region";
 type OutputFormat = "mp4" | "gif" | "audioOnly";
@@ -789,7 +789,7 @@ function MainApp() {
           ? `${region.width}×${region.height}`
           : t("selectRegion");
 
-  const formatLabel = format === "gif" ? "GIF" : "Audio (AAC)";
+  const formatLabel = format === "gif" ? t("formatGifPill") : t("formatAudioPill");
 
   return (
     <div className="capto-app">
@@ -1022,11 +1022,11 @@ function MainApp() {
                 <div className="seg-row">
                   {(
                     [
-                      ["mp4", "FFmpeg"],
-                      ["gif", "Gif"],
-                      ["audioOnly", "Audio"],
+                      ["mp4", "formatMp4"],
+                      ["gif", "formatGif"],
+                      ["audioOnly", "formatAudio"],
                     ] as const
-                  ).map(([id, label]) => (
+                  ).map(([id, labelKey]) => (
                     <button
                       key={id}
                       type="button"
@@ -1036,7 +1036,7 @@ function MainApp() {
                         persistMainPrefs({ outputFormat: id });
                       }}
                     >
-                      {label}
+                      {t(labelKey)}
                     </button>
                   ))}
                 </div>
@@ -1055,8 +1055,10 @@ function MainApp() {
                     </option>
                     {availableEncoders.map((e) => (
                       <option key={e.kind} value={e.kind}>
-                        Mp4 ({e.name}
-                        {e.hardware ? " HW" : ""} | AAC)
+                        {t("encoderMp4Option", {
+                          encoder: e.name,
+                          hw: e.hardware ? t("encoderHwSuffix") : "",
+                        })}
                       </option>
                     ))}
                   </select>
@@ -1290,7 +1292,7 @@ function MainApp() {
               {(session?.outputPath || lastShot) && (
                 <div className="last-files mono">
                   {session?.outputPath && <div>{t("lastFile")}: {session.outputPath}</div>}
-                  {lastShot && <div>Shot: {lastShot}</div>}
+                  {lastShot && <div>{t("lastShot", { path: lastShot })}</div>}
                 </div>
               )}
             </>
@@ -1342,8 +1344,11 @@ function MainApp() {
                   value={settings.locale}
                   onChange={(e) => setSettings({ ...settings, locale: e.target.value })}
                 >
-                  <option value="zh-CN">中文</option>
-                  <option value="en">English</option>
+                  {SUPPORTED_LOCALES.map((loc) => (
+                    <option key={loc.id} value={loc.id}>
+                      {loc.nativeLabel}
+                    </option>
+                  ))}
                 </select>
               </label>
               <label className="check">

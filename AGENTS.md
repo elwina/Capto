@@ -36,7 +36,8 @@ Do not name both `capto` — they would clash in `target/debug` and on case-inse
 | `crates/capto-cli` | CLI client (`capto` binary) |
 | `packages/capto-agent-skill` | Publishable Agent Skills npm package |
 | `docs/ARCHITECTURE.md` | Pipeline + control-plane contracts |
-| `docs/CLI.md` | CLI / agent JSON contract |
+| `docs/CLI.md` | CLI / agent JSON contract (EN + 中文) |
+| `website/` | Product landing page |
 
 ## Cloud vs local Windows
 
@@ -70,13 +71,15 @@ npm run tauri --prefix apps/desktop -- dev   # builds capto-app
 cargo run -p capto-cli -- doctor             # runs `capto`
 ```
 
-Place a local FFmpeg into the app bundle:
+Place local FFmpeg + stage the CLI into the app bundle (required for `tauri build`):
 
 ```bash
-.\scripts\copy-ffmpeg.ps1
+.\scripts\copy-ffmpeg.ps1   # or download-ffmpeg.ps1
+cargo build -p capto-cli --release
+.\scripts\copy-cli.ps1
 ```
 
-See `apps/desktop/src-tauri/binaries/README.md`.
+Installer embeds CLI at `<install>\cli\capto.exe` and adds that folder to user **PATH** (NSIS hook). Not a separate Release asset. See `apps/desktop/src-tauri/binaries/README.md` and `windows/hooks.nsh`.
 
 ## Feature matrix
 

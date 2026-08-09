@@ -602,6 +602,18 @@ fn read_capto_ffmpeg_meta_near(ffmpeg_path: &std::path::Path) -> Option<CaptoFfm
     None
 }
 
+/// Strip Win32 extended/verbatim prefixes (`\\?\`, `\\.\`) for UI display.
+fn display_path(path: &std::path::Path) -> String {
+    let s = path.to_string_lossy();
+    let trimmed = s
+        .strip_prefix(r"\\?\UNC\")
+        .map(|rest| format!(r"\\{rest}"))
+        .or_else(|| s.strip_prefix(r"\\?\").map(|rest| rest.to_string()))
+        .or_else(|| s.strip_prefix(r"\\.\").map(|rest| rest.to_string()))
+        .unwrap_or_else(|| s.into_owned());
+    trimmed
+}
+
 #[tauri::command]
 async fn get_ffmpeg_info(app: AppHandle, state: State<'_, AppState>) -> Result<FfmpegInfo, String> {
     let encoder = {
@@ -633,7 +645,7 @@ async fn get_ffmpeg_info(app: AppHandle, state: State<'_, AppState>) -> Result<F
         });
     };
 
-    let path = encoder.binary_path().to_string_lossy().into_owned();
+    let path = display_path(encoder.binary_path());
     let meta = read_capto_ffmpeg_meta_near(encoder.binary_path())
         .or(resource_meta)
         .unwrap_or(pinned);
@@ -694,7 +706,7 @@ async fn get_platform_info(state: State<'_, AppState>) -> Result<PlatformInfo, S
     let _ = session.refresh_encoder();
     let ffmpeg_path = session
         .encoder()
-        .map(|e| e.binary_path().to_string_lossy().into_owned());
+        .map(|e| display_path(e.binary_path()));
     Ok(PlatformInfo {
         capture_backend: session.capture().platform_name().into(),
         os: std::env::consts::OS.into(),
@@ -885,6 +897,101 @@ fn init_tracing() {
     let _ = fmt().with_env_filter(filter).with_target(true).try_init();
 }
 
+fn tray_labels(locale: &str) -> [&'static str; 6] {
+    let lang = locale.to_ascii_lowercase();
+    if lang.starts_with("zh-tw") || lang == "zh-hant" {
+        [
+            "顯示 Capto",
+            "開始錄製",
+            "暫停 / 繼續",
+            "停止錄製",
+            "截圖",
+            "結束",
+        ]
+    } else if lang.starts_with("zh") {
+        [
+            "显示 Capto",
+            "开始录制",
+            "暂停 / 继续",
+            "停止录制",
+            "截图",
+            "退出",
+        ]
+    } else if lang.starts_with("ja") {
+        [
+            "Capto を表示",
+            "録画開始",
+            "一時停止 / 再開",
+            "録画停止",
+            "スクリーンショット",
+            "終了",
+        ]
+    } else if lang.starts_with("ko") {
+        [
+            "Capto 표시",
+            "녹화 시작",
+            "일시정지 / 재개",
+            "녹화 중지",
+            "스크린샷",
+            "종료",
+        ]
+    } else if lang.starts_with("de") {
+        [
+            "Capto anzeigen",
+            "Aufnahme starten",
+            "Pause / Weiter",
+            "Aufnahme stoppen",
+            "Screenshot",
+            "Beenden",
+        ]
+    } else if lang.starts_with("fr") {
+        [
+            "Afficher Capto",
+            "Démarrer l’enregistrement",
+            "Pause / Reprendre",
+            "Arrêter l’enregistrement",
+            "Capture d’écran",
+            "Quitter",
+        ]
+    } else if lang.starts_with("es") {
+        [
+            "Mostrar Capto",
+            "Iniciar grabación",
+            "Pausa / Reanudar",
+            "Detener grabación",
+            "Captura de pantalla",
+            "Salir",
+        ]
+    } else if lang.starts_with("pt") {
+        [
+            "Mostrar Capto",
+            "Iniciar gravação",
+            "Pausar / Retomar",
+            "Parar gravação",
+            "Captura de tela",
+            "Sair",
+        ]
+    } else if lang.starts_with("ru") {
+        [
+            "Показать Capto",
+            "Начать запись",
+            "Пауза / Продолжить",
+            "Остановить запись",
+            "Снимок экрана",
+            "Выход",
+        ]
+    } else {
+        [
+            "Show Capto",
+            "Start Recording",
+            "Pause / Resume",
+            "Stop Recording",
+            "Screenshot",
+            "Quit",
+        ]
+    }
+}
+
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     init_tracing();
@@ -925,13 +1032,14 @@ pub fn run() {
                 hotkey_conflicts: std::sync::Mutex::new(Vec::new()),
             });
 
-            let show_i = MenuItem::with_id(app, "show", "Show Capto", true, None::<&str>)?;
-            let start_i = MenuItem::with_id(app, "start", "Start Recording", true, None::<&str>)?;
-            let pause_i =
-                MenuItem::with_id(app, "pause", "Pause / Resume", true, None::<&str>)?;
-            let stop_i = MenuItem::with_id(app, "stop", "Stop Recording", true, None::<&str>)?;
-            let shot_i = MenuItem::with_id(app, "shot", "Screenshot", true, None::<&str>)?;
-            let quit_i = MenuItem::with_id(app, "quit", "Quit", true, None::<&str>)?;
+            let [show_l, start_l, pause_l, stop_l, shot_l, quit_l] =
+                tray_labels(&settings.locale);
+            let show_i = MenuItem::with_id(app, "show", show_l, true, None::<&str>)?;
+            let start_i = MenuItem::with_id(app, "start", start_l, true, None::<&str>)?;
+            let pause_i = MenuItem::with_id(app, "pause", pause_l, true, None::<&str>)?;
+            let stop_i = MenuItem::with_id(app, "stop", stop_l, true, None::<&str>)?;
+            let shot_i = MenuItem::with_id(app, "shot", shot_l, true, None::<&str>)?;
+            let quit_i = MenuItem::with_id(app, "quit", quit_l, true, None::<&str>)?;
             let menu = Menu::with_items(
                 app,
                 &[&show_i, &start_i, &pause_i, &stop_i, &shot_i, &quit_i],

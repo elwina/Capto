@@ -141,5 +141,21 @@
   "updateDownloading": "正在下载更新…",
   "updateDownloadingPercent": "正在下载更新… {{percent}}%",
   "updateInstalling": "正在安装… Capto 即将重启。",
-  "updateError": "检查更新失败：{{message}}"
+  "updateError": "检查更新失败：{{message}}",
+  "pickWindowHint": "将鼠标移到目标窗口上，单击选择 · Esc 取消",
+  "lastShot": "最近截图：{{path}}",
+  "formatMp4": "FFmpeg",
+  "formatGif": "GIF",
+  "formatAudio": "音频",
+  "formatGifPill": "GIF",
+  "formatAudioPill": "音频 (AAC)",
+  "encoderMp4Option": "MP4 ({{encoder}}{{hw}} | AAC)",
+  "encoderHwSuffix": " 硬件",
+  "cancel": "取消",
+  "selectRegionHint": "框选区域（Esc）",
+  "trayShow": "显示 Capto",
+  "trayStart": "开始录制",
+  "trayPause": "暂停 / 继续",
+  "trayStop": "停止录制",
+  "trayQuit": "退出"
 }

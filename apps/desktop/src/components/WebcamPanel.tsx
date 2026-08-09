@@ -29,6 +29,24 @@ export function WebcamPanel({
   const anchor = webcam.position?.anchor ?? "bottomRight";
   const solo = useWebcamSoloPreview(camOn && previewCam, webcam.deviceId ?? null);
 
+  function webcamErrorText(raw: string | null): string | null {
+    if (!raw) return null;
+    const s = raw.toLowerCase();
+    if (s.includes("busy") || s.includes("in use") || s.includes("占用")) {
+      return t("webcamError.busy");
+    }
+    if (s.includes("denied") || s.includes("permission") || s.includes("权限")) {
+      return t("webcamError.denied");
+    }
+    if (s.includes("not found") || s.includes("no device") || s.includes("未找到")) {
+      return t("webcamError.notFound");
+    }
+    if (s.includes("unsupported") || s.includes("不支持")) {
+      return t("webcamError.unsupported");
+    }
+    return t("webcamError.unknown");
+  }
+
   function patch(partial: Partial<WebcamConfig>) {
     onChange({ ...webcam, ...partial });
   }
@@ -106,7 +124,11 @@ export function WebcamPanel({
             {camOn && solo.imageUrl ? (
               <img src={solo.imageUrl} alt={t("webcamPreview")} draggable={false} />
             ) : (
-              <span>{camOn ? (solo.error ?? t("webcamStarting")) : t("webcamOff")}</span>
+              <span>
+                {camOn
+                  ? (webcamErrorText(solo.error) ?? t("webcamStarting"))
+                  : t("webcamOff")}
+              </span>
             )}
           </div>
         </div>

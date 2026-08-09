@@ -39,9 +39,15 @@
     "externalBin": [
       "binaries/ffmpeg"
     ],
-    "resources": [
-      "binaries/capto-ffmpeg.json"
-    ]
+    "resources": {
+      "binaries/capto-ffmpeg.json": "binaries/capto-ffmpeg.json",
+      "binaries/capto.exe": "cli/capto.exe"
+    },
+    "windows": {
+      "nsis": {
+        "installerHooks": "./windows/hooks.nsh"
+      }
+    }
   },
   "plugins": {
     "updater": {

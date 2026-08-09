@@ -1,74 +1,67 @@
-﻿# Capto
+﻿<p align="center">
+  <img src="apps/desktop/public/capto-mark.png" alt="Capto" width="220" />
+</p>
 
-纯本地屏幕录制 / 截图应用——[Captura](https://github.com/MathewSachin/Captura) 的精神续作。
+<h1 align="center">Capto</h1>
 
-**栈：** Tauri 2 · Rust · React · TypeScript  
-**平台：** Windows 10 1903+ 优先（架构已预留 macOS / Linux）
+<p align="center">
+  <strong>Ultra-light Windows screen recorder</strong><br />
+  Spiritual successor to <a href="https://github.com/MathewSachin/Captura">Captura</a>.
+</p>
 
-## 功能矩阵
+<p align="center">
+  <a href="https://github.com/elwina/Capto/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/elwina/Capto/ci.yml?branch=main&style=flat-square&label=CI" alt="CI" /></a>
+  <a href="https://github.com/elwina/Capto/releases/latest"><img src="https://img.shields.io/github/v/release/elwina/Capto?include_prereleases&style=flat-square&label=release" alt="Release" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/elwina/Capto?style=flat-square" alt="License" /></a>
+  <a href="https://github.com/elwina/Capto/releases"><img src="https://img.shields.io/github/downloads/elwina/Capto/total?style=flat-square" alt="Downloads" /></a>
+  <a href="https://www.npmjs.com/package/capto-agent-skill"><img src="https://img.shields.io/npm/v/capto-agent-skill?style=flat-square&label=capto-agent-skill" alt="npm" /></a>
+  <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Windows" />
+  <img src="https://img.shields.io/badge/stack-Tauri%202%20%7C%20Rust%20%7C%20React-9B7BFF?style=flat-square" alt="Stack" />
+</p>
 
-### P0（MVP）
+<p align="center">
+  <a href="README.zh-CN.md">中文</a> ·
+  <a href="website/index.html">Website</a> ·
+  <a href="https://github.com/elwina/Capto/releases">Releases</a>
+</p>
 
-- 截图：显示器 / 窗口 / 区域
-- 录屏：MP4（自动探测 NVENC / QSV / AMF / libx264）
-- GIF 导出
-- 光标开关、麦克风 + 系统环回混音
-- 全局热键（开始 / 暂停 / 停止 / 截图）
-- 托盘、录制时隐藏窗口
-- 摄像头画中画进成片（dshow）
-- 点击高亮 + 按键 overlay 进成片
-- 本地 JSON 设置、中英 i18n、区域选择器
+## Why Capto
 
-### P1
+| | |
+|:---:|:---|
+| 🪟 | **Capture modes + Windows-tuned stack** — Display / window / region, with a Windows-first path (DXGI / WASAPI and friends) instead of a generic lowest-common-denominator backend. |
+| 🎬 | **MP4 & GIF** — Record to MP4 (auto NVENC / QSV / AMF / libx264) or export GIF. |
+| ✨ | **Overlays** — Mouse-click highlights, keystroke overlay, webcam PiP, include-cursor, and live preview. |
+| 🎞️ | **Rebuilt FFmpeg sidecar (`capto-ffmpeg`)** — Capto-owned, pinned, attested FFmpeg embedded in the app. Encoding goes only through this bundle — not whatever is on `PATH`. |
+| 🤖 | **CLI + Agent Skill for AI** — Full `capto` control plane (JSON, stable exit codes) and [`capto-agent-skill`](https://www.npmjs.com/package/capto-agent-skill) so agents can doctor → record → stop → collect outputs. |
+| 🔒 | **Open source · local · safe** — MIT, no upload SDKs, files stay on your machine. |
 
-- Overlay：图片 / 文字静态烧录
-- CLI：二进制 `capto` 经本机 HTTP 控制桌面（`status` / `record` / `shot` / `config` / `list` / `outputs` / `doctor`），默认 JSON，可自动拉起 Capto；Agent Skill 包 `capto-agent-skill`
-- 热键自定义设置 UI（默认四键已注册）
-- 桌面单实例（二次启动只聚焦已有进程）
-- 应用内更新（`tauri-plugin-updater`，GitHub `updater` 频道；CDN/CF Worker 镜像后续）
+## Install
 
-### 明确不做
+Download the NSIS setup for your CPU (**x64** / **arm64**) from [Releases](https://github.com/elwina/Capto/releases). Installers embed verified FFmpeg from [`capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) and the `capto` CLI at `<install>\cli\capto.exe`, and add that `cli` folder to your user **PATH** so `capto` works in new terminals (not a separate download).
 
-Imgur / YouTube / 上传、SharpAvi、BASS、Win7/GDI 主路径、社区周边、计时成片叠加、简易图编辑（裁剪 / 矩形 / 箭头 / 文字 / 模糊）
-
-## 开发
+## Develop
 
 ```bash
-# 依赖（锁定文件：apps/desktop/package-lock.json）
 npm install --prefix apps/desktop
-
-# 放置捆绑 FFmpeg（从本机已有安装复制，不联网下载）
-# .\scripts\copy-ffmpeg.ps1
-# → apps/desktop/src-tauri/binaries/ffmpeg.exe
-
-# 桌面端
+.\scripts\download-ffmpeg.ps1   # or copy-ffmpeg.ps1
+cargo build -p capto-cli --release
+.\scripts\copy-cli.ps1          # required for tauri build / package
 npm run tauri --prefix apps/desktop -- dev
-
-# 测试
 cargo test --workspace
-
-# CLI（二进制名 `capto`；控制桌面会话，未开则自动启动）
 cargo run -p capto-cli -- status
-cargo run -p capto-cli -- list displays
-cargo run -p capto-cli -- config get fps
-cargo run -p capto-cli -- record start --source display
-cargo run -p capto-cli -- record stop
-cargo run -p capto-cli -- outputs recent --limit 5
-# 开发时若找不到桌面：
-# $env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto-app.exe"
 ```
 
-**文档**
+If the CLI cannot find the desktop in dev:
 
-| 文档 | 内容 |
-|------|------|
-| [AGENTS.md](AGENTS.md) | 仓库约定、agent 边界、二进制命名 |
-| [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | 录制管线、单实例、控制面 |
-| [docs/CLI.md](docs/CLI.md) | CLI 命令、JSON/退出码、agent 工作流 |
-| [docs/CROSS_PLATFORM.md](docs/CROSS_PLATFORM.md) | macOS / Linux 后端路线 |
-| [docs/CI.md](docs/CI.md) | GitHub Actions：CI 与 Release（x64 + ARM64，FFmpeg 来自 capto-ffmpeg） |
-| [packages/capto-agent-skill](packages/capto-agent-skill) | 可发布到 npm 的 Agent Skill（`capto-agent-skill`） |
+```powershell
+$env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto-app.exe"
+```
 
-## 许可
+## Author
 
-MIT（全新实现，不 fork Captura 源码）
+**Elwina Vardal** · [elwina.work](https://www.elwina.work) · [GitHub](https://github.com/elwina)
+
+## License
+
+MIT (clean-room implementation — not a Captura fork)

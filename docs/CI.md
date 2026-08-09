@@ -5,7 +5,7 @@
 | Workflow | File | Trigger | Purpose |
 |----------|------|---------|---------|
 | **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR → `main` | Rust test + clippy, frontend `tsc`, `cargo check` for **x64 + ARM64**, FFmpeg pin download + attestation |
-| **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg; upload `capto` CLI assets; signed updater artifacts + rolling `updater` manifest |
+| **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg + CLI (`cli/capto.exe`); signed updater artifacts + rolling `updater` manifest |
 
 CI and Release are intentionally separate: green CI does not publish; Release does not replace day-to-day checks.
 
@@ -52,12 +52,12 @@ Checks:
 
 ## Architectures
 
-| Display | Rust target (internal) | Installer | CLI asset |
-|---------|------------------------|-----------|-----------|
-| **x64** | `x86_64-pc-windows-msvc` | NSIS `.exe` | `capto-windows-x64.exe` |
-| **arm64** | `aarch64-pc-windows-msvc` | NSIS `.exe` | `capto-windows-arm64.exe` |
+| Display | Rust target (internal) | Installer | Bundled CLI |
+|---------|------------------------|-----------|-------------|
+| **x64** | `x86_64-pc-windows-msvc` | NSIS `.exe` | `<install>\cli\capto.exe` (+ user PATH) |
+| **arm64** | `aarch64-pc-windows-msvc` | NSIS `.exe` | `<install>\cli\capto.exe` (+ user PATH) |
 
-Job titles and release assets use **x64 / arm64**. The `*-windows-msvc` strings are only Rust target triples (Windows ABI). **MSI is not built** — NSIS setup exe only.
+Job titles and release assets use **x64 / arm64**. The `*-windows-msvc` strings are only Rust target triples (Windows ABI). **MSI is not built** — NSIS setup exe only. The CLI is **not** published as a separate Release asset (`capto-windows-*.exe` retired).
 
 ## GitHub Actions versions
 
@@ -66,7 +66,6 @@ Aligned with Tauri’s current pipeline docs + Node 24 runners:
 - `actions/checkout@v7`
 - `actions/setup-node@v6` with `node-version: "24"`
 - `tauri-apps/tauri-action@v1`
-- `actions/upload-artifact@v5` / `actions/download-artifact@v5`
 
 ```powershell
 cargo test --workspace

@@ -7,7 +7,7 @@ description: >-
   encoders, or finding recent Capto output files. Prefer `capto` over spawning
   system FFmpeg.
 license: MIT
-compatibility: Requires Capto desktop on Windows with bundled FFmpeg; CLI binary `capto` on PATH or via cargo run -p capto-cli
+compatibility: Requires Capto desktop on Windows (installer embeds FFmpeg + CLI and adds cli\ to PATH); or cargo run -p capto-cli in a dev checkout
 metadata:
   author: elwina
   version: "0.1.0"
@@ -20,7 +20,7 @@ Capto is a **local-only** screen recorder. Agents control the **single** Capto d
 
 ## Rules
 
-1. Invoke `capto <command>` when on PATH; in this repo use `cargo run -p capto-cli -- <command>` (binary name is `capto`).
+1. Invoke `capto <command>` after Capto install (PATH); in this repo use `cargo run -p capto-cli -- <command>` (binary name is `capto`).
 2. Parse **JSON stdout**: `{ "ok": true, "data": … }` or `{ "ok": false, "error": { "code", "message" } }`. Ignore stderr traces.
 3. Exit codes: `0` ok, `1` usage, `2` desktop unavailable, `3` state conflict, `4` capture, `5` encode, `6` config IO.
 4. One session — if `status` is `recording`, do not `record start` again.

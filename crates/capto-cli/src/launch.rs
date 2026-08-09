@@ -30,9 +30,12 @@ fn find_capto_exe() -> Result<PathBuf> {
 
     if let Ok(exe) = std::env::current_exe() {
         if let Some(dir) = exe.parent() {
-            // Installed / side-by-side names (desktop is NOT the CLI binary).
+            // Installed layout: <install>/cli/capto.exe → parent Capto.exe
+            // (cannot place capto.exe beside Capto.exe on case-insensitive Windows).
             candidates.push(dir.join("Capto.exe"));
             candidates.push(dir.join("capto-app.exe"));
+            candidates.push(dir.join("../Capto.exe"));
+            candidates.push(dir.join("../capto-app.exe"));
             candidates.push(dir.join("../debug/capto-app.exe"));
             candidates.push(dir.join("../release/capto-app.exe"));
         }

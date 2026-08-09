@@ -1,47 +1,58 @@
-# FFmpeg sidecar
+# Sidecars (FFmpeg + CLI)
 
-Capto ships a **bundled** `ffmpeg` next to the app (Tauri `externalBin`).
-At runtime it uses **only** that copy — never system `PATH` / WinGet.
+Capto ships two extras next to the installed app:
+
+| File | Role |
+|------|------|
+| `ffmpeg.exe` (Tauri `externalBin`) | Encoding only — never system `PATH` |
+| `cli/capto.exe` (Tauri `resources` + NSIS PATH hook) | Agent/CLI control-plane client |
+
+`cli/capto.exe` is **not** placed beside `Capto.exe`: Windows paths are case-insensitive, so `Capto.exe` and `capto.exe` cannot share a folder.
 
 ## Developer setup
 
-Download the pinned Capto FFmpeg Release for the current Rust target:
+### FFmpeg
 
 ```powershell
 .\scripts\download-ffmpeg.ps1
+# or local binary:
+.\scripts\copy-ffmpeg.ps1
 ```
 
-For a cross-target package build, pass the exact Tauri/Rust target triple:
+Cross-target package:
 
 ```powershell
 .\scripts\download-ffmpeg.ps1 -TargetTriple aarch64-pc-windows-msvc
 ```
 
-The script selects the matching Release asset and verifies it against that
-Release's `SHA256SUMS` before copying it into this folder.
+Writes:
 
-For a custom local FFmpeg build, copy an existing `ffmpeg.exe` instead:
+- `ffmpeg.exe` — `tauri dev`
+- `ffmpeg-<target-triple>.exe` — `externalBin`
+
+### CLI
 
 ```powershell
-.\scripts\copy-ffmpeg.ps1
-# or
-.\scripts\copy-ffmpeg.ps1 -Source "C:\path\to\ffmpeg.exe"
+cargo build -p capto-cli --release
+.\scripts\copy-cli.ps1
 ```
 
-Both scripts write:
+Writes `capto.exe` (and `capto-<triple>.exe` for bookkeeping). Required before `tauri build` / release packaging.
 
-- `ffmpeg.exe` — used in `tauri dev`
-- `ffmpeg-<target-triple>.exe` — required by Tauri `externalBin`
-
-Do **not** commit the binary (see root `.gitignore`).
+Do **not** commit these binaries (see root `.gitignore`).
 
 ## Release
 
-GitHub Actions **Release** workflow runs `scripts/download-ffmpeg.ps1` for each target
-(`x86_64-pc-windows-msvc`, `aarch64-pc-windows-msvc`) before Tauri packages the app.
-Pin and provenance: `.github/capto-ffmpeg.env` + [docs/CI.md](../../../docs/CI.md).
-The installer embeds that verified sidecar; end users do not install FFmpeg separately.
+GitHub Actions **Release** workflow:
 
-## Suggested capabilities
+1. `scripts/download-ffmpeg.ps1` per target
+2. `cargo build -p capto-cli` + `scripts/copy-cli.ps1`
+3. Tauri NSIS package (embeds both; `windows/hooks.nsh` adds `<install>\cli` to user PATH)
+
+Standalone `capto-windows-*.exe` assets are **not** uploaded to GitHub Releases.
+
+Pin / provenance for FFmpeg: `.github/capto-ffmpeg.env` + [docs/CI.md](../../../docs/CI.md).
+
+## Suggested FFmpeg capabilities
 
 Prefer a full GPL build with `gdigrab`, `libx264`, NVENC/QSV/AMF, `gif` + palette filters, and AAC.

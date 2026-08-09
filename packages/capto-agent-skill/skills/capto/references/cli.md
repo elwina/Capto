@@ -15,7 +15,7 @@ Lockfile: `%APPDATA%\Capto\cli-server.json` (`pid`, `port`, `token`, `version`).
 { "ok": false, "error": { "code": "desktopUnavailable", "message": "…" } }
 ```
 
-`data` fields are camelCase.
+`data` fields are camelCase. Prefer exit code, then `error.code`.
 
 ## Exit codes
 
@@ -34,12 +34,12 @@ Lockfile: `%APPDATA%\Capto\cli-server.json` (`pid`, `port`, `token`, `version`).
 | Command | Purpose |
 |---------|---------|
 | `doctor` | FFmpeg / backend / control plane |
-| `status` | Session snapshot |
+| `status` | Session snapshot (`idle` / `recording` / `paused` / …) |
 | `list displays\|windows\|audio\|encoders` | Discovery |
-| `config get [key]` / `set` / `path` | Settings |
+| `config get [key]` / `set` / `path` | Settings (camelCase keys) |
 | `shot` | Screenshot → `data.path` |
 | `record start\|stop\|pause\|resume` | Recording |
-| `outputs recent\|open` | Recent files / open |
+| `outputs recent\|open` | Recent files / open folder |
 
 ### `record start` flags
 
@@ -47,11 +47,30 @@ Lockfile: `%APPDATA%\Capto\cli-server.json` (`pid`, `port`, `token`, `version`).
 
 Always `record stop` when finished (no CLI duration auto-stop).
 
+### Global flags
+
+- Default: JSON envelope on stdout
+- `--human`: pretty data only
+- `--no-launch`: do not start desktop if control plane is down
+
+## Install / path
+
+Capto installer embeds the CLI at `<install>\cli\capto.exe` and adds that folder to the user **PATH** (open a new terminal after install). Not a separate Release download.
+
 ## Repo / cargo
 
 ```bash
-cargo run -p capto-cli -- status          # runs binary named `capto`
+cargo run -p capto-cli -- status          # binary name `capto`
 cargo build -p capto-app                  # desktop executable
 ```
 
-Desktop package is `capto-app` so it does not overwrite the CLI `capto.exe` in `target/debug`.
+Desktop package is `capto-app` so it does not overwrite CLI `capto.exe` in `target/debug`. Installed layout uses `cli\capto.exe` because Windows cannot place `capto.exe` beside `Capto.exe`.
+
+Dev: `$env:CAPTO_APP_PATH = "<repo>/target/debug/capto-app.exe"` when auto-launch cannot find Capto.
+
+## Safety
+
+- Prefer `--no-launch` in headless CI
+- Never log the Bearer token
+- Never double-`record start`
+- Never spawn system FFmpeg for Capto outputs; never upload

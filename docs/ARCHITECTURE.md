@@ -73,7 +73,7 @@ The **`capto`** CLI (crate `capto-cli`) does **not** own a recording session. It
 2. CLI reads the lock file, sends `Authorization: Bearer <token>`, calls `/v1/...`.
 3. If the plane is down, CLI spawns the desktop (`CAPTO_APP_PATH` / `capto-app.exe` / installed Capto) and polls until ready. Single-instance ensures that spawn cannot create a second session.
 
-CLI vs desktop binaries stay distinct (`capto` vs `capto-app`) so they do not overwrite each other in `target/debug` or collide on case-insensitive Windows paths.
+CLI vs desktop binaries stay distinct (`capto` vs `capto-app`) so they do not overwrite each other in `target/debug` or collide on case-insensitive Windows paths. The installer ships the CLI at `<install>/cli/capto.exe` and adds that folder to user PATH (not a separate Release asset).
 
 Shared types live in `capto-ipc`. Default CLI stdout is a JSON envelope `{ ok, data | error }` with stable exit codes.
 

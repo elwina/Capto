@@ -145,7 +145,7 @@ export function AboutPanel() {
         </div>
 
         <div className="about-block">
-          <div className="card-label">capto-ffmpeg</div>
+          <div className="card-label">{t("aboutFfmpeg")}</div>
           {!ffmpeg ? (
             <p className="about-muted">{t("aboutLoading")}</p>
           ) : (

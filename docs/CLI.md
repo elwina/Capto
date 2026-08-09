@@ -1,5 +1,9 @@
 # Capto CLI
 
+<p>
+  <strong>English</strong> · <a href="#zhongwen">中文</a>
+</p>
+
 Agent-oriented control surface for Capto. The CLI binary is named **`capto`**. It talks to the **running desktop app** (`capto-app` / installed Capto) over a localhost HTTP control plane. It does **not** create a second `RecordingSession`.
 
 Full architecture: [ARCHITECTURE.md](ARCHITECTURE.md).  
@@ -24,12 +28,12 @@ Agent / shell
 | Discovery | `%APPDATA%\Capto\cli-server.json` |
 | No upload | Local files only |
 
-> **Why not both named `capto`?** Cargo would write two `target/debug/capto.exe`. On Windows, same-folder `Capto.exe` / `capto.exe` also collide (case-insensitive). So CLI owns `capto`; desktop crate is `capto-app`.
+> **Why not both named `capto` in the same folder?** Cargo would write two `target/debug/capto.exe`. On Windows, `Capto.exe` / `capto.exe` also collide (case-insensitive). So CLI owns `capto`; desktop crate is `capto-app`. The **installer** places the CLI at `<install>\cli\capto.exe` and adds that `cli` folder to user **PATH** — not a separate Release download.
 
 ## Invoke
 
 ```bash
-# Prefer when installed on PATH
+# After Capto install (cli\ is on PATH — open a new terminal)
 capto <command> [args]
 
 # From this repo
@@ -51,7 +55,7 @@ Dev auto-launch:
 $env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto-app.exe"
 ```
 
-Lookup order: `CAPTO_APP_PATH` → `Capto.exe` / `capto-app.exe` beside CLI → `target/debug|release/capto-app.exe` → common install paths.
+Lookup order: `CAPTO_APP_PATH` → `Capto.exe` / `capto-app.exe` beside CLI or one level up (`cli\`) → `target/debug|release/capto-app.exe` → common install paths.
 
 ## JSON envelope (agent contract)
 
@@ -93,6 +97,8 @@ Branch on **exit code first**, then `error.code`.
 capto doctor
 ```
 
+Environment / FFmpeg / control-plane readiness.
+
 ### `status`
 
 ```bash
@@ -131,6 +137,8 @@ capto shot --source window --window <hwnd>
 capto shot --source region --x 0 --y 0 --width 1280 --height 720
 ```
 
+Returns `data.path` (absolute PNG).
+
 ### `record`
 
 ```bash
@@ -140,6 +148,8 @@ capto record pause
 capto record resume
 capto record stop
 ```
+
+`record start` useful flags: `--source`, `--display`, `--window`, `--x/--y/--width/--height`, `--format mp4|gif|audio`, `--fps`, `--encoder`, `--mic`, `--loopback`, `--no-cursor`.
 
 Always `record stop` when done (no duration auto-stop).
 
@@ -201,3 +211,96 @@ Ships `skills/capto/SKILL.md` per [Agent Skills](https://agentskills.io) + npm `
 - Do not log the Bearer token from `cli-server.json`
 - Do not double-`record start`
 - Encode only through Capto
+
+---
+
+<a id="zhongwen"></a>
+
+# Capto CLI（中文）
+
+<p>
+  <a href="#">English</a> · <strong>中文</strong>
+</p>
+
+面向 Agent 的控制面。CLI 二进制名为 **`capto`**，通过本机 HTTP 控制**已运行的桌面端**（`capto-app` / 安装版 Capto），**不会**再开第二个 `RecordingSession`。
+
+架构见 [ARCHITECTURE.md](ARCHITECTURE.md)。  
+npm Skill：[`packages/capto-agent-skill`](../packages/capto-agent-skill)。
+
+## 心智模型
+
+```
+Agent / 终端
+    → capto  （stdout JSON，稳定退出码）
+        → 127.0.0.1:<port> + Bearer
+            → Capto 桌面（单进程）
+                → 录制会话 / 设置 / 输出
+```
+
+| 约定 | 说明 |
+|------|------|
+| CLI | `capto`（crate `capto-cli`） |
+| 桌面 | 开发产物 `capto-app.exe`，产品名 Capto |
+| 单实例 | 整机一个 Capto 进程 |
+| 自动拉起 | 控制面不在时 CLI 会启动桌面（可用 `--no-launch` 禁止） |
+| 发现 | `%APPDATA%\Capto\cli-server.json` |
+| 不上云 | 只写本地文件 |
+
+> 不要把桌面也命名为 `capto`：`target/debug` 会撞名；Windows 路径大小写不敏感也会冲突。安装包因此把 CLI 放到 `<安装目录>\cli\capto.exe`，并写入用户 **PATH**（新开终端可用 `capto`），**不再单独发布** CLI。
+
+## 调用
+
+```bash
+capto <command> [args]
+cargo run -p capto-cli -- <command> [args]
+```
+
+| 全局参数 | 含义 |
+|----------|------|
+| （默认） | stdout JSON 信封 |
+| `--human` | 只打印可读数据 |
+| `--no-launch` | 桌面未开则直接失败 |
+
+开发环境：
+
+```powershell
+$env:CAPTO_APP_PATH = "…\target\debug\capto-app.exe"
+```
+
+## JSON 信封
+
+成功：`{ "ok": true, "data": { } }`  
+失败：`{ "ok": false, "error": { "code": "desktopUnavailable", "message": "…" } }`
+
+`data` 字段为 **camelCase**。先看退出码，再看 `error.code`。
+
+| 退出码 | 含义 |
+|--------|------|
+| 0 | 成功 |
+| 1 | 参数 / 用法错误 |
+| 2 | 桌面不可用 |
+| 3 | 状态冲突（如已在录制） |
+| 4 | 采集失败 |
+| 5 | 编码失败 |
+| 6 | 配置 / 输出 IO |
+
+## 命令速查
+
+| 命令 | 作用 |
+|------|------|
+| `doctor` | 环境 / FFmpeg / 控制面 |
+| `status` | 会话状态 |
+| `list displays\|windows\|audio\|encoders` | 枚举设备 |
+| `config get\|set\|path` | 读写设置 |
+| `shot` | 截图 → `data.path` |
+| `record start\|stop\|pause\|resume` | 录制 |
+| `outputs recent\|open` | 最近文件 / 打开目录 |
+
+典型录制流程：`doctor` → `list displays` → `record start` → `status` → `record stop` → `outputs recent`。
+
+## 安全注意
+
+- CI / 无界面环境用 `--no-launch`
+- 不要把 lockfile 里的 token 打进日志
+- 不要重复 `record start`
+- 编码只走 Capto，不要自己起系统 FFmpeg

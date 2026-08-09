@@ -92,7 +92,7 @@ impl Default for AppSettings {
             hide_app_while_recording: true,
             minimize_to_tray_on_close: true,
             show_preview: false,
-            locale: "zh-CN".into(),
+            locale: "en".into(),
             hotkeys: default_hotkeys(),
             overlays: OverlayConfig::default(),
         }

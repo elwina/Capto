@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { emit } from "@tauri-apps/api/event";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { useTranslation } from "react-i18next";
 
 export interface PickedWindow {
   id: number;
@@ -15,6 +16,7 @@ export interface PickedWindow {
 
 /** Fullscreen Captura-style window picker: hover highlight, click to select, Esc cancel. */
 export function WindowPickerOverlay() {
+  const { t } = useTranslation();
   const [hover, setHover] = useState<PickedWindow | null>(null);
   const [origin, setOrigin] = useState({ x: 0, y: 0 });
   const [scale, setScale] = useState(1);
@@ -61,7 +63,7 @@ export function WindowPickerOverlay() {
   return (
     <div className="picker-root" onClick={() => void select()}>
       <div className="picker-banner">
-        将鼠标移到目标窗口上，单击选择 · Esc 取消
+        {t("pickWindowHint")}
         {hover ? ` — ${hover.title}` : ""}
       </div>
       {hover && (

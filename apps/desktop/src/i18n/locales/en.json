@@ -141,5 +141,21 @@
   "updateDownloading": "Downloading update…",
   "updateDownloadingPercent": "Downloading update… {{percent}}%",
   "updateInstalling": "Installing… Capto will restart.",
-  "updateError": "Update check failed: {{message}}"
+  "updateError": "Update check failed: {{message}}",
+  "pickWindowHint": "Move the mouse over a window, click to select · Esc to cancel",
+  "lastShot": "Last screenshot: {{path}}",
+  "formatMp4": "FFmpeg",
+  "formatGif": "GIF",
+  "formatAudio": "Audio",
+  "formatGifPill": "GIF",
+  "formatAudioPill": "Audio (AAC)",
+  "encoderMp4Option": "MP4 ({{encoder}}{{hw}} | AAC)",
+  "encoderHwSuffix": " HW",
+  "cancel": "Cancel",
+  "selectRegionHint": "Select region (Esc)",
+  "trayShow": "Show Capto",
+  "trayStart": "Start Recording",
+  "trayPause": "Pause / Resume",
+  "trayStop": "Stop Recording",
+  "trayQuit": "Quit"
 }

@@ -1,7 +1,7 @@
 name: Release
 
-# Windows x64 + arm64 installers with FFmpeg embedded from elwina/capto-ffmpeg
-# (SHA-256 + Artifact Attestation). Separate from CI.
+# Windows x64 + arm64 installers with FFmpeg + CLI embedded from the Capto build.
+# Separate from CI. Do not attach standalone CLI release assets.
 
 on:
   push:
@@ -72,15 +72,12 @@ jobs:
           .\scripts\download-ffmpeg.ps1 -TargetTriple "${{ matrix.target }}" -VerifyAttestation
           Get-Item "apps/desktop/src-tauri/binaries/ffmpeg-${{ matrix.target }}.exe" | Format-List Name, Length
 
-      - name: Build CLI (`capto`)
-        run: cargo build -p capto-cli --release --target ${{ matrix.target }}
-
-      - name: Upload CLI artifact
-        uses: actions/upload-artifact@v5
-        with:
-          name: capto-cli-${{ matrix.arch }}
-          path: target/${{ matrix.target }}/release/capto.exe
-          if-no-files-found: error
+      - name: Build and stage CLI (`capto`)
+        shell: pwsh
+        run: |
+          cargo build -p capto-cli --release --target ${{ matrix.target }}
+          .\scripts\copy-cli.ps1 -TargetTriple "${{ matrix.target }}" -Profile release
+          Get-Item "apps/desktop/src-tauri/binaries/capto.exe" | Format-List Name, Length
 
       - name: Build Tauri installer
         uses: tauri-apps/tauri-action@v1
@@ -96,40 +93,15 @@ jobs:
             Capto **v__VERSION__** (Windows).
 
             - Bundled FFmpeg from [`elwina/capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) (SHA-256 + attestation; pin in `.github/capto-ffmpeg.env`)
+            - Bundled CLI (`<install>\cli\capto.exe`) added to user PATH — not a separate download
             - Architectures: **x64**, **arm64**
             - Installer: NSIS `.exe` setup (signed updater artifacts included)
-            - CLI: `capto-windows-x64.exe` / `capto-windows-arm64.exe`
             - In-app updates read `latest.json` from the rolling [`updater`](https://github.com/elwina/Capto/releases/tag/updater) channel
 
-            Install the setup matching your CPU.
+            Install the setup matching your CPU. After install, open a **new** terminal and run `capto doctor`.
           releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
           args: --target ${{ matrix.target }} --bundles nsis
-
-  attach-cli:
-    name: Attach CLI to release
-    needs: release
-    if: startsWith(github.ref, 'refs/tags/v')
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/download-artifact@v5
-        with:
-          path: artifacts
-
-      - name: Rename CLI assets
-        run: |
-          mkdir -p out
-          cp artifacts/capto-cli-x64/capto.exe out/capto-windows-x64.exe
-          cp artifacts/capto-cli-arm64/capto.exe out/capto-windows-arm64.exe
-          ls -la out
-
-      - name: Upload CLI to GitHub Release
-        uses: softprops/action-gh-release@v2
-        with:
-          files: |
-            out/capto-windows-x64.exe
-            out/capto-windows-arm64.exe
-          fail_on_unmatched_files: true
 
   # v0.* releases are marked prerelease, so /releases/latest skips them.
   # Keep a rolling tag `updater` with only latest.json (installer URLs still point at v*).
