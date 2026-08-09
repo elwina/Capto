@@ -19,6 +19,7 @@ Desktop.ini
 .env
 .env.*
 !.env.example
+.secrets/
 
 # FFmpeg sidecar binaries (download locally; do not commit large binaries)
 apps/desktop/src-tauri/binaries/ffmpeg*

@@ -87,5 +87,5 @@ See root `README.md`. P0 = MVP, P1 = next, cut list is permanent.
 See [docs/CI.md](docs/CI.md). Summary:
 
 - **CI** (`.github/workflows/ci.yml`): tests on push/PR — not a publisher
-- **Release** (`.github/workflows/release.yml`): tag `v*` → Windows NSIS for x64 + ARM64 with FFmpeg from `elwina/capto-ffmpeg` (pin in `.github/capto-ffmpeg.env`)
+- **Release** (`.github/workflows/release.yml`): tag `v*` → Windows NSIS for x64 + ARM64 with FFmpeg from `elwina/capto-ffmpeg` (pin in `.github/capto-ffmpeg.env`); signed updater artifacts; rolling `updater` release hosts `latest.json`
 - Current app version **0.1.0**; treat `v0.*` as prerelease until **1.0.0**

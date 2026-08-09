@@ -4,6 +4,7 @@ import { listen } from "@tauri-apps/api/event";
 import { open } from "@tauri-apps/plugin-dialog";
 import { useTranslation } from "react-i18next";
 import { OverlayPanel } from "./components/OverlayPanel";
+import { AboutPanel } from "./components/AboutPanel";
 import { HotkeySettings, type HotkeyBinding } from "./components/HotkeySettings";
 import { RecordOverlayRuntime } from "./components/RecordOverlayRuntime";
 import { RecordingPreview } from "./components/RecordingPreview";
@@ -16,7 +17,7 @@ import i18n from "./i18n";
 
 type VideoSource = "display" | "window" | "region";
 type OutputFormat = "mp4" | "gif" | "audioOnly";
-type Tab = "main" | "webcam" | "overlays" | "settings";
+type Tab = "main" | "webcam" | "overlays" | "settings" | "about";
 
 interface DisplayInfo {
   id: number;
@@ -169,6 +170,8 @@ const I: Record<string, IconPath> = {
     "M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Zm-7 9h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11Z",
   cam:
     "M4 7h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Zm13 2.5 5-3v11l-5-3v-5Z",
+  info:
+    "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-6h2Zm0-8h-2V7h2Z",
 };
 
 export default function App() {
@@ -885,6 +888,7 @@ function MainApp() {
               ["webcam", I.cam, t("webcamPip")],
               ["overlays", I.layers, t("overlays")],
               ["settings", I.gear, t("settings")],
+              ["about", I.info, t("about")],
             ] as const
           ).map(([id, icon, label]) => (
             <button
@@ -1394,6 +1398,8 @@ function MainApp() {
               </button>
             </section>
           )}
+
+          {tab === "about" && <AboutPanel />}
         </main>
       </div>
 

@@ -110,6 +110,14 @@ try {
         Copy-Item -LiteralPath $downloaded -Destination (Join-Path $binDir "ffmpeg.exe") -Force
     }
 
+    $meta = @{
+        repository = $Repository
+        tag        = $Tag
+        asset      = $asset
+        sha256     = $actualHash
+    } | ConvertTo-Json -Compress
+    Set-Content -LiteralPath (Join-Path $binDir "capto-ffmpeg.json") -Value $meta -Encoding utf8
+
     Write-Host "Release: $Repository@$Tag"
     Write-Host "Asset  : $asset"
     Write-Host "SHA256 : $actualHash"
@@ -117,6 +125,7 @@ try {
     if ($hostTriple -eq $TargetTriple) {
         Write-Host "Copied : $(Join-Path $binDir 'ffmpeg.exe')"
     }
+    Write-Host "Meta   : $(Join-Path $binDir 'capto-ffmpeg.json')"
 }
 finally {
     Remove-Item -LiteralPath $tempDir -Recurse -Force -ErrorAction SilentlyContinue

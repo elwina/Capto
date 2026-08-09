@@ -86,6 +86,8 @@ jobs:
         uses: tauri-apps/tauri-action@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY_PASSWORD }}
         with:
           projectPath: apps/desktop
           tagName: v__VERSION__
@@ -95,8 +97,9 @@ jobs:
 
             - Bundled FFmpeg from [`elwina/capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) (SHA-256 + attestation; pin in `.github/capto-ffmpeg.env`)
             - Architectures: **x64**, **arm64**
-            - Installer: NSIS `.exe` setup
+            - Installer: NSIS `.exe` setup (signed updater artifacts included)
             - CLI: `capto-windows-x64.exe` / `capto-windows-arm64.exe`
+            - In-app updates read `latest.json` from the rolling [`updater`](https://github.com/elwina/Capto/releases/tag/updater) channel
 
             Install the setup matching your CPU.
           releaseDraft: ${{ github.event_name == 'workflow_dispatch' && inputs.draft || false }}
@@ -127,3 +130,42 @@ jobs:
             out/capto-windows-x64.exe
             out/capto-windows-arm64.exe
           fail_on_unmatched_files: true
+
+  # v0.* releases are marked prerelease, so /releases/latest skips them.
+  # Keep a rolling tag `updater` with only latest.json (installer URLs still point at v*).
+  publish-updater-manifest:
+    name: Publish updater manifest
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Fetch latest.json from versioned release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          gh release download "$TAG" --repo "${{ github.repository }}" --pattern 'latest.json' --dir .
+          test -f latest.json
+          echo "--- latest.json ---"
+          cat latest.json
+
+      - name: Ensure updater channel release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          if ! gh release view updater --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            gh release create updater \
+              --repo "${{ github.repository }}" \
+              --title "Updater channel" \
+              --notes "Rolling \`latest.json\` for Capto in-app updates. Download installers from versioned \`v*\` releases — this tag only hosts the updater manifest." \
+              --prerelease
+          fi
+
+      - name: Publish latest.json to updater channel
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          gh release upload updater latest.json --repo "${{ github.repository }}" --clobber

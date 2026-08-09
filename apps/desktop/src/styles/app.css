@@ -340,6 +340,195 @@ html.picker-mode #root {
   align-self: flex-start;
 }
 
+.update-settings {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.update-settings-row {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.update-settings-status {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+.update-settings-status.is-error {
+  color: var(--danger);
+}
+
+.about-stack {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.about-panel {
+  gap: 14px;
+}
+
+.about-developer {
+  gap: 10px;
+}
+
+.about-dev-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.about-dev-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.about-dev-icon {
+  flex: 0 0 auto;
+  width: 16px;
+  height: 16px;
+  color: var(--muted);
+}
+
+.about-dev-row .link-btn {
+  min-width: 0;
+}
+
+.about-hero-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.about-hero-text {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  min-width: 0;
+}
+
+.about-product {
+  font-size: 1.35rem;
+  font-weight: 650;
+  letter-spacing: 0.01em;
+}
+
+.about-tagline {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.35;
+}
+
+.about-logo {
+  flex: 0 0 auto;
+  width: 72px;
+  height: 72px;
+  object-fit: contain;
+  background: transparent;
+}
+
+.about-updates {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.about-block {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.about-dl {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.about-dl > div {
+  display: grid;
+  grid-template-columns: 96px 1fr;
+  gap: 8px;
+  align-items: start;
+}
+
+.about-dl dt {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.about-dl dd {
+  margin: 0;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.about-path {
+  font-family: ui-monospace, "Cascadia Mono", "Consolas", monospace;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.about-muted {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.about-donate {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line);
+}
+
+.about-donate-qr {
+  width: 168px;
+  height: 168px;
+  object-fit: contain;
+  align-self: flex-start;
+  border-radius: 8px;
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 6px;
+}
+
+.link-btn {
+  border: 0;
+  padding: 0;
+  background: transparent;
+  color: var(--accent);
+  cursor: pointer;
+  font: inherit;
+  text-align: left;
+  word-break: break-all;
+}
+
+.link-btn:hover {
+  text-decoration: underline;
+}
+
 .hotkey-settings {
   display: flex;
   flex-direction: column;

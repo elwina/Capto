@@ -544,6 +544,120 @@ struct PlatformInfo {
     ffmpeg_path: Option<String>,
 }
 
+#[derive(Serialize)]
+#[serde(rename_all = "camelCase")]
+struct FfmpegInfo {
+    available: bool,
+    /// Capto FFmpeg release tag (e.g. `v0.1.0-n9.0`).
+    bundle_version: Option<String>,
+    /// Short FFmpeg version token from `ffmpeg -version`.
+    ffmpeg_version: Option<String>,
+    /// Full first line of `ffmpeg -version` (tooltip / detail).
+    ffmpeg_version_line: Option<String>,
+    path: Option<String>,
+    /// GitHub repo slug, e.g. `elwina/capto-ffmpeg`.
+    repository: Option<String>,
+}
+
+#[derive(Deserialize)]
+struct CaptoFfmpegMeta {
+    repository: Option<String>,
+    tag: Option<String>,
+}
+
+fn pinned_capto_ffmpeg_meta() -> CaptoFfmpegMeta {
+    const PIN: &str = include_str!("../../../../.github/capto-ffmpeg.env");
+    let mut repository = None;
+    let mut tag = None;
+    for line in PIN.lines() {
+        let line = line.trim();
+        if line.is_empty() || line.starts_with('#') {
+            continue;
+        }
+        let Some((k, v)) = line.split_once('=') else {
+            continue;
+        };
+        match k.trim() {
+            "CAPTO_FFMPEG_REPO" => repository = Some(v.trim().to_string()),
+            "CAPTO_FFMPEG_TAG" => tag = Some(v.trim().to_string()),
+            _ => {}
+        }
+    }
+    CaptoFfmpegMeta { repository, tag }
+}
+
+fn read_capto_ffmpeg_meta_near(ffmpeg_path: &std::path::Path) -> Option<CaptoFfmpegMeta> {
+    let dir = ffmpeg_path.parent()?;
+    let candidates = [
+        dir.join("capto-ffmpeg.json"),
+        dir.join("binaries").join("capto-ffmpeg.json"),
+    ];
+    for path in candidates {
+        if let Ok(text) = std::fs::read_to_string(&path) {
+            if let Ok(meta) = serde_json::from_str::<CaptoFfmpegMeta>(&text) {
+                return Some(meta);
+            }
+        }
+    }
+    None
+}
+
+#[tauri::command]
+async fn get_ffmpeg_info(app: AppHandle, state: State<'_, AppState>) -> Result<FfmpegInfo, String> {
+    let encoder = {
+        let mut session = state.session.lock().await;
+        let _ = session.refresh_encoder();
+        session.encoder().cloned()
+    };
+    let pinned = pinned_capto_ffmpeg_meta();
+    let resource_meta = app
+        .path()
+        .resource_dir()
+        .ok()
+        .and_then(|dir| {
+            let path = dir.join("capto-ffmpeg.json");
+            std::fs::read_to_string(path)
+                .ok()
+                .and_then(|t| serde_json::from_str::<CaptoFfmpegMeta>(&t).ok())
+        });
+
+    let Some(encoder) = encoder else {
+        let meta = resource_meta.unwrap_or(pinned);
+        return Ok(FfmpegInfo {
+            available: false,
+            bundle_version: meta.tag,
+            ffmpeg_version: None,
+            ffmpeg_version_line: None,
+            path: None,
+            repository: meta.repository,
+        });
+    };
+
+    let path = encoder.binary_path().to_string_lossy().into_owned();
+    let meta = read_capto_ffmpeg_meta_near(encoder.binary_path())
+        .or(resource_meta)
+        .unwrap_or(pinned);
+    match encoder.version_line().await {
+        Ok(line) => Ok(FfmpegInfo {
+            available: true,
+            bundle_version: meta.tag,
+            ffmpeg_version: capto_encode::parse_ffmpeg_version_token(&line)
+                .or_else(|| Some(line.clone())),
+            ffmpeg_version_line: Some(line),
+            path: Some(path),
+            repository: meta.repository,
+        }),
+        Err(e) => Ok(FfmpegInfo {
+            available: true,
+            bundle_version: meta.tag,
+            ffmpeg_version: Some(e.to_string()),
+            ffmpeg_version_line: None,
+            path: Some(path),
+            repository: meta.repository,
+        }),
+    }
+}
+
 #[tauri::command]
 async fn open_output_folder(state: State<'_, AppState>) -> Result<String, String> {
     let session = state.session.lock().await;
@@ -787,10 +901,18 @@ pub fn run() {
         }));
     }
 
-    builder
+    builder = builder
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_opener::init())
-        .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
+        .plugin(tauri_plugin_global_shortcut::Builder::new().build());
+
+    #[cfg(desktop)]
+    {
+        builder = builder.plugin(tauri_plugin_updater::Builder::new().build());
+    }
+
+    builder
         .setup(|app| {
             let sidecar = sidecar_dir(app.handle());
             let settings = AppSettings::load();
@@ -923,6 +1045,7 @@ pub fn run() {
             release_preview_session,
             get_overlay_defaults,
             get_platform_info,
+            get_ffmpeg_info,
             open_output_folder,
             window_under_cursor,
             open_window_picker,

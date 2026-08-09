@@ -35,3 +35,7 @@ tower = { workspace = true }
 http = { workspace = true }
 capto-ipc = { workspace = true }
 uuid = { workspace = true }
+tauri-plugin-process = "2.3.1"
+
+[target.'cfg(any(target_os = "macos", windows, target_os = "linux"))'.dependencies]
+tauri-plugin-updater = "2.10.1"

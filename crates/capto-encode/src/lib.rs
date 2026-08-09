@@ -98,6 +98,32 @@ impl FfmpegEncoder {
         &self.binary
     }
 
+    /// First line of `ffmpeg -version` (e.g. `ffmpeg version 7.1 Copyright …`).
+    pub async fn version_line(&self) -> Result<String> {
+        let mut cmd = Command::new(&self.binary);
+        cmd.arg("-version")
+            .stdin(Stdio::null())
+            .stdout(Stdio::piped())
+            .stderr(Stdio::piped());
+        #[cfg(windows)]
+        {
+            const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+            cmd.creation_flags(CREATE_NO_WINDOW);
+        }
+        let output = cmd.output().await?;
+        let stdout = String::from_utf8_lossy(&output.stdout);
+        let stderr = String::from_utf8_lossy(&output.stderr);
+        parse_ffmpeg_version_line(&stdout)
+            .or_else(|| parse_ffmpeg_version_line(&stderr))
+            .ok_or_else(|| {
+                EncodeError::FfmpegFailed(if output.status.success() {
+                    "ffmpeg -version produced no version line".into()
+                } else {
+                    stderr.trim().to_string()
+                })
+            })
+    }
+
     pub async fn probe_encoders(&self) -> Result<Vec<EncoderInfo>> {
         let output = Command::new(&self.binary)
             .args(["-hide_banner", "-encoders"])
@@ -463,6 +489,25 @@ mod dshow_tests {
     }
 }
 
+fn parse_ffmpeg_version_line(text: &str) -> Option<String> {
+    text.lines()
+        .map(str::trim)
+        .find(|line| line.to_ascii_lowercase().starts_with("ffmpeg version"))
+        .map(str::to_string)
+}
+
+/// Short token after `ffmpeg version` (e.g. `7.1`, `N-115123-g…`).
+pub fn parse_ffmpeg_version_token(version_line: &str) -> Option<String> {
+    let lower = version_line.to_ascii_lowercase();
+    let rest = lower.strip_prefix("ffmpeg version")?;
+    let original_rest = version_line.get(version_line.len() - rest.len()..)?;
+    let token = original_rest
+        .split_whitespace()
+        .next()
+        .filter(|t| !t.is_empty())?;
+    Some(token.to_string())
+}
+
 /// Prefer plain `ffmpeg(.exe)` (installed sidecar), then Tauri triple-suffixed names.
 fn find_ffmpeg_in_dir(dir: &Path) -> Option<PathBuf> {
     for name in ["ffmpeg.exe", "ffmpeg"] {
@@ -521,6 +566,19 @@ mod tests {
             .to_string_lossy()
             .starts_with("ffmpeg-"));
         let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn parse_ffmpeg_version_line_reads_first_match() {
+        let out = "ffmpeg version 7.1 Copyright (c) 2000-2024\nconfiguration: --enable-gpl\n";
+        assert_eq!(
+            parse_ffmpeg_version_line(out).as_deref(),
+            Some("ffmpeg version 7.1 Copyright (c) 2000-2024")
+        );
+        assert_eq!(
+            parse_ffmpeg_version_token("ffmpeg version 7.1 Copyright (c) 2000-2024").as_deref(),
+            Some("7.1")
+        );
     }
 
     fn tempfile_dir() -> PathBuf {

@@ -5,7 +5,7 @@
 | Workflow | File | Trigger | Purpose |
 |----------|------|---------|---------|
 | **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR → `main` | Rust test + clippy, frontend `tsc`, `cargo check` for **x64 + ARM64**, FFmpeg pin download + attestation |
-| **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg; upload `capto` CLI assets |
+| **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg; upload `capto` CLI assets; signed updater artifacts + rolling `updater` manifest |
 
 CI and Release are intentionally separate: green CI does not publish; Release does not replace day-to-day checks.
 
@@ -14,6 +14,23 @@ CI and Release are intentionally separate: green CI does not publish; Release do
 - App / workspace version today: **0.1.0** (`Cargo.toml` workspace + `tauri.conf.json`)
 - Git tags: `v0.1.0`, … — `v0.*` releases are marked **prerelease**
 - First stable line: **1.0.0** (`v1.0.0`) when ready
+
+## In-app updates (GitHub)
+
+Desktop uses [`tauri-plugin-updater`](https://v2.tauri.app/plugin/updater/) with minisign verification.
+
+| Piece | Location |
+|-------|----------|
+| Public key | `apps/desktop/src-tauri/tauri.conf.json` → `plugins.updater.pubkey` |
+| Private key | GitHub Actions secret **`TAURI_SIGNING_PRIVATE_KEY`** (optional empty **`TAURI_SIGNING_PRIVATE_KEY_PASSWORD`**) |
+| Check URL | `https://github.com/elwina/Capto/releases/download/updater/latest.json` |
+| Installer URLs | Inside `latest.json`, pointing at the versioned `v*` release assets |
+
+`v0.*` tags are **prerelease**, so GitHub’s `/releases/latest` would skip them. Each Release therefore mirrors `latest.json` onto a rolling tag **`updater`** (manifest only). CDN / CF Worker mirrors can be added later as extra `endpoints` entries.
+
+Local key (gitignored): `.secrets/capto.key` — do not commit. Rotate only if the private key is lost or leaked (existing installs cannot verify new signatures after a pubkey change unless you ship a bridge release).
+
+Settings UI: **关于** tab — version, manual update check, bundled FFmpeg version, developer links.
 
 ## FFmpeg (security)
 

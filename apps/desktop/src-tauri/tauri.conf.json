@@ -28,6 +28,7 @@
   "bundle": {
     "active": true,
     "targets": ["nsis"],
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
@@ -37,7 +38,20 @@
     ],
     "externalBin": [
       "binaries/ffmpeg"
+    ],
+    "resources": [
+      "binaries/capto-ffmpeg.json"
     ]
   },
-  "plugins": {}
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDhCQTY5N0YxMDhBMjY0NUEKUldSYVpLSUk4WmVtaTJ6UE5ic0t5OWJKMmxvTjltY2tDTjhpbWx3SlI0MFJlbHFxeERjMndCcFEK",
+      "endpoints": [
+        "https://github.com/elwina/Capto/releases/download/updater/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
+  }
 }

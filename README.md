@@ -25,6 +25,7 @@
 - CLI：二进制 `capto` 经本机 HTTP 控制桌面（`status` / `record` / `shot` / `config` / `list` / `outputs` / `doctor`），默认 JSON，可自动拉起 Capto；Agent Skill 包 `capto-agent-skill`
 - 热键自定义设置 UI（默认四键已注册）
 - 桌面单实例（二次启动只聚焦已有进程）
+- 应用内更新（`tauri-plugin-updater`，GitHub `updater` 频道；CDN/CF Worker 镜像后续）
 
 ### 明确不做
 
