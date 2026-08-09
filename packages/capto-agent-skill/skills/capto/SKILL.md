@@ -10,7 +10,7 @@ license: MIT
 compatibility: Requires Capto desktop on Windows (installer embeds FFmpeg + CLI and adds cli\ to PATH); or cargo run -p capto-cli in a dev checkout
 metadata:
   author: elwina
-  version: "0.1.0"
+  version: "0.2.0"
   npm: capto-agent-skill
 ---
 

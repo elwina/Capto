@@ -373,6 +373,7 @@ function MainApp() {
       const w = ev.payload;
       setSource("window");
       setPickedWindow(w);
+      // Capture path stores the window rect as a region crop of its monitor.
       setRegion({ x: w.x, y: w.y, width: w.width, height: w.height });
       setTab("main");
       const cur = settingsRef.current;
@@ -390,10 +391,10 @@ function MainApp() {
     });
     const unRegion = listen<{
       region: { x: number; y: number; width: number; height: number };
-      action: "apply" | "record" | "shot";
     }>("picker://region-selected", (ev) => {
-      const { region: r, action } = ev.payload;
+      const r = ev.payload.region;
       setSource("region");
+      setPickedWindow(null);
       setRegion(r);
       setTab("main");
       const cur = settingsRef.current;
@@ -407,50 +408,6 @@ function MainApp() {
             defaultWindowTitle: null,
           },
         }).catch(() => undefined);
-      }
-        if (action === "record") {
-          const opts = recordOptsRef.current;
-          void (async () => {
-            setStartingRecord(true);
-            try {
-            const latest = settingsRef.current;
-            if (saveTimer.current !== undefined) {
-              window.clearTimeout(saveTimer.current);
-              saveTimer.current = undefined;
-            }
-            if (latest) await invoke("save_settings", { settings: latest });
-            // Keep preview cam warm — record path reuses it.
-            const snap = await invoke<SessionSnapshot>("start_recording", {
-              args: {
-                source: "region",
-                displayId: opts.displayId,
-                windowId: null,
-                region: r,
-                includeCursor: opts.cursor,
-                micDevice: opts.mic || null,
-                loopbackDevice: opts.loopback || null,
-                micVolume: opts.micVolume,
-                loopbackVolume: opts.loopbackVolume,
-                encoder: opts.encoder || null,
-                format: opts.format,
-                fps: opts.fps,
-                quality: opts.quality,
-              },
-            });
-            setSession(snap);
-            } catch (e) {
-              setError(String(e));
-            } finally {
-              setStartingRecord(false);
-            }
-          })();
-      }
-      if (action === "shot") {
-        void invoke<string>("take_screenshot", {
-          args: { source: "region", displayId: 0, windowId: null, region: r },
-        })
-          .then(setLastShot)
-          .catch((e) => setError(String(e)));
       }
     });
     const timer = window.setInterval(() => {
@@ -772,12 +729,12 @@ function MainApp() {
   }
 
   function selectSource(next: VideoSource) {
-    setSource(next);
     setTab("main");
-    if (next === "window") void invoke("open_window_picker");
-    if (next === "region") void invoke("open_region_picker");
+    setError(null);
     if (next === "display") {
+      setSource("display");
       setPickedWindow(null);
+      setRegion(null);
       persistMainPrefs({
         defaultSource: "display",
         defaultWindowId: null,
@@ -785,7 +742,20 @@ function MainApp() {
         defaultRegion: null,
         defaultDisplayId: displayId,
       });
+      return;
     }
+    // Always open the picker (including re-pick while already on window/region).
+    if (next === "window") {
+      void invoke("open_window_picker").catch((e) => setError(String(e)));
+      return;
+    }
+    if (next === "region") {
+      void invoke("open_region_picker").catch((e) => setError(String(e)));
+    }
+  }
+
+  function reselectCurrentSource() {
+    if (source === "window" || source === "region") selectSource(source);
   }
 
   const sourceLabel =
@@ -1022,8 +992,34 @@ function MainApp() {
                     <Icon path={I.cam} />
                   </button>
                 </div>
-                <p className="hint mono">{sourceLabel}</p>
+                <p
+                  className="hint mono"
+                  style={
+                    source === "window" || source === "region"
+                      ? { cursor: "pointer", textDecoration: "underline" }
+                      : undefined
+                  }
+                  title={
+                    source === "window"
+                      ? t("pickWindow")
+                      : source === "region"
+                        ? t("selectRegion")
+                        : undefined
+                  }
+                  onClick={() => reselectCurrentSource()}
+                >
+                  {sourceLabel}
+                </p>
               </section>
+
+              {settings && format !== "audioOnly" && (
+                <RecordingPreview
+                  showStage={showPreviewStage}
+                  enabled={showPreviewStage}
+                  preview={previewState}
+                  webcam={webcam}
+                />
+              )}
 
               <section className="capto-card">
                 <div className="card-label">{t("videoEncoder")}</div>
@@ -1287,15 +1283,6 @@ function MainApp() {
                   </button>
                 </div>
               </section>
-
-              {settings && format !== "audioOnly" && (
-                <RecordingPreview
-                  showStage={showPreviewStage}
-                  enabled={showPreviewStage}
-                  preview={previewState}
-                  webcam={webcam}
-                />
-              )}
 
               {(session?.outputPath || lastShot) && (
                 <div className="last-files mono">

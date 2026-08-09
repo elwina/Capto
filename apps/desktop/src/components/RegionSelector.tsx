@@ -15,39 +15,34 @@ interface Point {
   y: number;
 }
 
-/** Captura-like region chrome: drag to select, then Record / Shot / Cancel.
- *  Final region uses physical cursor positions (matches FFmpeg gdigrab). */
+/**
+ * Region picker only — drag and release to select. Esc cancels.
+ * Recording / screenshot stay on the main Capto window.
+ */
 export function RegionSelector({
   onApply,
   onCancel,
-  onRecord,
-  onShot,
   standalone = false,
 }: {
   onApply: (r: Region) => void;
   onCancel: () => void;
-  onRecord?: (r: Region) => void;
-  onShot?: (r: Region) => void;
-  /** When true, runs inside the dedicated region-picker window. */
   standalone?: boolean;
 }) {
   const { t } = useTranslation();
   const [startClient, setStartClient] = useState<Point | null>(null);
   const [currentClient, setCurrentClient] = useState<Point | null>(null);
   const [startScreen, setStartScreen] = useState<Point | null>(null);
-  const [committedClient, setCommittedClient] = useState<Region | null>(null);
-  const [committedScreen, setCommittedScreen] = useState<Region | null>(null);
+  const [busy, setBusy] = useState(false);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
-        if (standalone) void invoke("close_region_picker");
-        else onCancel();
-      }
+      if (e.key !== "Escape" || busy) return;
+      if (standalone) void invoke("close_region_picker");
+      else onCancel();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [onCancel, standalone]);
+  }, [busy, onCancel, standalone]);
 
   const drafting =
     startClient && currentClient
@@ -59,100 +54,78 @@ export function RegionSelector({
         }
       : null;
 
-  const rect = committedClient ?? drafting;
-
   async function readCursor(): Promise<Point> {
     return invoke<Point>("cursor_position");
   }
 
   async function finishDrag() {
+    if (busy) return;
     if (!drafting || drafting.width < 8 || drafting.height < 8 || !startScreen) {
-      if (!committedClient) {
-        if (standalone) void invoke("close_region_picker");
-        else onCancel();
+      setStartClient(null);
+      setCurrentClient(null);
+      setStartScreen(null);
+      return;
+    }
+    setBusy(true);
+    try {
+      const end = await readCursor();
+      const screen: Region = {
+        x: Math.min(startScreen.x, end.x),
+        y: Math.min(startScreen.y, end.y),
+        width: Math.max(2, Math.abs(end.x - startScreen.x)),
+        height: Math.max(2, Math.abs(end.y - startScreen.y)),
+      };
+      if (standalone) {
+        await emit("picker://region-selected", { region: screen });
+        await invoke("close_region_picker");
+      } else {
+        onApply(screen);
       }
-      return;
+    } catch {
+      setBusy(false);
+      setStartClient(null);
+      setCurrentClient(null);
+      setStartScreen(null);
     }
-    const end = await readCursor();
-    const screen: Region = {
-      x: Math.min(startScreen.x, end.x),
-      y: Math.min(startScreen.y, end.y),
-      width: Math.max(2, Math.abs(end.x - startScreen.x)),
-      height: Math.max(2, Math.abs(end.y - startScreen.y)),
-    };
-    setCommittedClient(drafting);
-    setCommittedScreen(screen);
-    setStartClient(null);
-    setCurrentClient(null);
-    setStartScreen(null);
-  }
-
-  async function emitRegion(action: "apply" | "record" | "shot") {
-    if (!committedScreen) return;
-    if (standalone) {
-      await emit("picker://region-selected", { region: committedScreen, action });
-      await invoke("close_region_picker");
-      return;
-    }
-    onApply(committedScreen);
-    if (action === "record") onRecord?.(committedScreen);
-    if (action === "shot") onShot?.(committedScreen);
   }
 
   return (
     <div
       className="region-overlay"
       onMouseDown={(e) => {
-        if (committedClient) return;
+        if (busy) return;
+        e.preventDefault();
         const client = { x: e.clientX, y: e.clientY };
         setStartClient(client);
         setCurrentClient(client);
         void readCursor().then(setStartScreen);
       }}
       onMouseMove={(e) => {
-        if (!startClient || committedClient) return;
+        if (!startClient || busy) return;
         setCurrentClient({ x: e.clientX, y: e.clientY });
       }}
       onMouseUp={() => {
         void finishDrag();
       }}
     >
-      {rect && (
+      {drafting && (
         <div
           className="region-box"
           style={{
-            left: rect.x,
-            top: rect.y,
-            width: rect.width,
-            height: rect.height,
+            left: drafting.x,
+            top: drafting.y,
+            width: drafting.width,
+            height: drafting.height,
           }}
         >
-          {committedClient && committedScreen && (
-            <div className="region-toolbar" onMouseDown={(e) => e.stopPropagation()}>
-              <button type="button" className="danger" onClick={() => void emitRegion("record")}>
-                {t("record")}
-              </button>
-              <button type="button" className="secondary" onClick={() => void emitRegion("shot")}>
-                {t("screenshot")}
-              </button>
-              <button
-                type="button"
-                className="ghost"
-                onClick={() => {
-                  if (standalone) void invoke("close_region_picker");
-                  else onCancel();
-                }}
-              >
-                {t("cancel")}
-              </button>
-              <span className="region-size mono">
-                {committedScreen.width}×{committedScreen.height}
-              </span>
-            </div>
-          )}
+          <div className="region-toolbar">
+            <span className="region-size mono">
+              {Math.round(drafting.width)}×{Math.round(drafting.height)}
+            </span>
+          </div>
         </div>
       )}
-      {!committedClient && <div className="region-hint">{t("selectRegionHint")}</div>}
+      {!drafting && <div className="region-hint">{t("selectRegionHint")}</div>}
     </div>
   );
 }

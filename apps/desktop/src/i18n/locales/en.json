@@ -152,7 +152,7 @@
   "encoderMp4Option": "MP4 ({{encoder}}{{hw}} | AAC)",
   "encoderHwSuffix": " HW",
   "cancel": "Cancel",
-  "selectRegionHint": "Select region (Esc)",
+  "selectRegionHint": "Drag to select a region, release to confirm (Esc cancels)",
   "trayShow": "Show Capto",
   "trayStart": "Start Recording",
   "trayPause": "Pause / Resume",

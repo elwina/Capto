@@ -152,7 +152,7 @@
   "encoderMp4Option": "MP4 ({{encoder}}{{hw}} | AAC)",
   "encoderHwSuffix": " 硬件",
   "cancel": "取消",
-  "selectRegionHint": "框选区域（Esc）",
+  "selectRegionHint": "拖拽框选区域，松开即确认（Esc 取消）",
   "trayShow": "显示 Capto",
   "trayStart": "开始录制",
   "trayPause": "暂停 / 继续",

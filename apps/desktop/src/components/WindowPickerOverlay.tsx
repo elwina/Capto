@@ -23,6 +23,8 @@ export function WindowPickerOverlay() {
   const [size, setSize] = useState({ width: 0, height: 0 });
   const [scale, setScale] = useState(1);
 
+  const [busy, setBusy] = useState(false);
+
   useEffect(() => {
     let alive = true;
     const win = getCurrentWindow();
@@ -49,6 +51,7 @@ export function WindowPickerOverlay() {
     }, 500);
 
     const tick = window.setInterval(() => {
+      if (busy) return;
       void invoke<PickedWindow | null>("window_under_cursor")
         .then((w) => {
           if (alive) setHover(w);
@@ -57,7 +60,7 @@ export function WindowPickerOverlay() {
     }, 40);
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") {
+      if (e.key === "Escape" && !busy) {
         void invoke("close_window_picker");
       }
     };
@@ -69,12 +72,17 @@ export function WindowPickerOverlay() {
       window.clearInterval(geoTick);
       window.removeEventListener("keydown", onKey);
     };
-  }, []);
+  }, [busy]);
 
   async function select() {
-    if (!hover) return;
-    await emit("picker://window-selected", hover);
-    await invoke("close_window_picker");
+    if (!hover || busy) return;
+    setBusy(true);
+    try {
+      await emit("picker://window-selected", hover);
+      await invoke("close_window_picker");
+    } catch {
+      setBusy(false);
+    }
   }
 
   const onThisMonitor =
