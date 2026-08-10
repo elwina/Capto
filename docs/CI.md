@@ -6,7 +6,7 @@
 |----------|------|---------|---------|
 | **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR → `main` | Rust test + clippy, frontend `tsc`, `cargo check` for **x64 + ARM64**, FFmpeg pin download + attestation |
 | **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg + CLI (`cli/capto.exe`); signed updater artifacts + rolling `updater` manifest |
-| **Website** | [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) | push `website/**` → `main`, or manual | Deploy static `website/` to GitHub Pages (`https://elwina.github.io/Capto/`) |
+| **Website** | [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) | push `website/**` → `main`, or manual | Deploy static `website/` to GitHub Pages (`https://elwina.github.io/Capto/`); Cloudflare Pages (`https://capto.elwina.work/`) deploys via the CF dashboard Git integration |
 
 CI and Release are intentionally separate: green CI does not publish; Release does not replace day-to-day checks.
 
@@ -57,6 +57,37 @@ so we list the Worker first and GitHub second.
 ```
 
 If the Worker is down/non-2XX, updates still work via the GitHub fallback.
+
+## Website hosting (GitHub Pages + Cloudflare Pages)
+
+The static landing page [`website/`](../website/) is deployed to **both** GitHub
+Pages and Cloudflare Pages (dual-active). GitHub Pages is driven by this repo's
+[`deploy-website.yml`](../.github/workflows/deploy-website.yml) on every push
+that touches `website/**`; Cloudflare Pages is driven by the **CF dashboard Git
+integration** (not by a workflow), so no `CLOUDFLARE_API_TOKEN` secret is needed.
+
+| Host | URL | Driver |
+|------|-----|--------|
+| GitHub Pages | `https://elwina.github.io/Capto/` | [`deploy-website.yml`](../.github/workflows/deploy-website.yml) `deploy` job (`actions/deploy-pages`) |
+| Cloudflare Pages | `https://capto.elwina.work/` (primary) / `https://capto.pages.dev/` | CF dashboard → Workers & Pages → **Connect to Git** |
+
+### Cloudflare Pages project (Git integration)
+
+Because this is a **monorepo**, the Pages project must be pointed at the
+`website/` subdirectory:
+
+- Project name: `capto`, production branch `main`
+- In CF dashboard → Workers & Pages → **Create** → **Connect to Git**, authorize
+  GitHub and select `elwina/Capto`
+- **Build configurations → Root directory → `website`** (otherwise CF deploys the
+  whole repo as a static site)
+- No build command needed (`website/` is already static), no output directory
+- Custom domain: `capto.elwina.work` (CNAME → `capto.pages.dev`); `elwina.work`
+  DNS lives in Tencent Cloud, so the CNAME must be added there (or the zone fully
+  migrated to Cloudflare DNS)
+
+Cloudflare Pages is the primary entry; GitHub Pages remains as the fallback if
+Cloudflare is unreachable.
 
 ## FFmpeg (security)
 

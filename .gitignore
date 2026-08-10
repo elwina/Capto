@@ -24,6 +24,7 @@ Desktop.ini
 # Cloudflare / wrangler local vars
 cloudflare/.dev.vars
 cloudflare/.wrangler
+.wrangler/
 
 # Sidecar binaries (download/build locally; do not commit)
 apps/desktop/src-tauri/binaries/ffmpeg*

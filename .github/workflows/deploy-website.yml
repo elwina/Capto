@@ -1,6 +1,8 @@
 name: Deploy website
 
 # Static landing page in website/ → GitHub Pages (https://elwina.github.io/Capto/).
+# Cloudflare Pages is deployed separately via the CF dashboard Git integration
+# (see docs/CI.md), not from this workflow.
 
 on:
   push:
