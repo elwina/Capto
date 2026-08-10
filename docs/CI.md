@@ -12,8 +12,8 @@ CI and Release are intentionally separate: green CI does not publish; Release do
 
 ## Versioning
 
-- App / workspace version today: **0.4.0** (`Cargo.toml` workspace + `tauri.conf.json`)
-- Git tags: `v0.4.0`, … — `v0.*` releases are marked **prerelease**
+- App / workspace version today: **0.5.0** (`Cargo.toml` workspace + `tauri.conf.json`)
+- Git tags: `v0.5.0`, … — `v0.*` releases are marked **prerelease**
 - First stable line: **1.0.0** (`v1.0.0`) when ready
 
 ## In-app updates (GitHub)
