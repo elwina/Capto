@@ -21,3 +21,10 @@ reqwest = { workspace = true }
 capto-ipc = { workspace = true }
 capto-core = { workspace = true }
 capto-encode = { workspace = true }
+
+[target.'cfg(windows)'.dependencies]
+windows = { version = "0.58", features = [
+  "Win32_Foundation",
+  "Win32_UI_Shell",
+  "Win32_UI_WindowsAndMessaging",
+] }

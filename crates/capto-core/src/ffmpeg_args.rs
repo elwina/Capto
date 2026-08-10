@@ -119,11 +119,9 @@ fn build_record_args_windows(
     ];
 
     args.extend([
-        // Wall-clock PTS so video duration tracks real time (matches WASAPI PCM).
-        // The DXGI pump must stay near target fps; when it falls behind it snaps
-        // forward instead of flooding catch-up frames (that stutter).
-        "-use_wallclock_as_timestamps".into(),
-        "1".into(),
+        // CFR from the DXGI pump's paced frames. Pausing stops the pump/audio
+        // writers so timeline length excludes paused wall time (wall-clock PTS
+        // would leave a gap and desync sample-clock PCM).
         "-f".into(),
         "rawvideo".into(),
         "-pix_fmt".into(),
@@ -503,7 +501,7 @@ mod tests {
         assert!(args.contains(&"pipe:0".to_string()));
         assert!(!args.iter().any(|a| a == "-shortest"));
         assert!(args.iter().any(|a| a.contains("frag_keyframe")));
-        assert!(args
+        assert!(!args
             .windows(2)
             .any(|w| w == ["-use_wallclock_as_timestamps", "1"]));
     }

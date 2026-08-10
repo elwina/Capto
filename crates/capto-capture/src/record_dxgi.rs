@@ -17,6 +17,7 @@ pub struct RecordPip {
 /// Blocking DXGI → BGRA writer used by the recording session.
 pub struct DxgiRecordPump {
     stop: Arc<AtomicBool>,
+    paused: Arc<AtomicBool>,
     thread: Option<JoinHandle<()>>,
 }
 
@@ -41,7 +42,9 @@ impl DxgiRecordPump {
         {
             crate::preview::release_preview_session();
             let stop = Arc::new(AtomicBool::new(false));
+            let paused = Arc::new(AtomicBool::new(false));
             let stop2 = Arc::clone(&stop);
+            let paused2 = Arc::clone(&paused);
             let fps = fps.clamp(1, 120);
             let mut on_frame = on_frame;
             let thread = thread::Builder::new()
@@ -54,6 +57,7 @@ impl DxgiRecordPump {
                         out_w,
                         out_h,
                         stop2,
+                        paused2,
                         &mut on_frame,
                         pip,
                     ) {
@@ -63,9 +67,15 @@ impl DxgiRecordPump {
                 .map_err(|e| CaptureError::Failed(e.to_string()))?;
             Ok(Self {
                 stop,
+                paused,
                 thread: Some(thread),
             })
         }
+    }
+
+    /// Soft-pause: stop delivering frames to FFmpeg (timeline excludes paused time).
+    pub fn set_paused(&self, paused: bool) {
+        self.paused.store(paused, Ordering::SeqCst);
     }
 
     pub fn stop(mut self) {
@@ -380,6 +390,7 @@ mod windows_impl {
         out_w: u32,
         out_h: u32,
         stop: Arc<AtomicBool>,
+        paused: Arc<AtomicBool>,
         on_frame: &mut dyn FnMut(Vec<u8>) -> bool,
         pip: Option<RecordPip>,
     ) -> Result<()> {
@@ -406,6 +417,14 @@ mod windows_impl {
         let mut next_deadline = Instant::now();
 
         while !stop.load(Ordering::Relaxed) {
+            if paused.load(Ordering::Relaxed) {
+                // Do not push frames while paused so the encode timeline skips
+                // this wall time (CFR / frame-count PTS stays continuous).
+                thread::sleep(frame_interval);
+                next_deadline = Instant::now() + frame_interval;
+                continue;
+            }
+
             let now = Instant::now();
             if now < next_deadline {
                 thread::sleep(next_deadline.saturating_duration_since(now));
@@ -464,7 +483,7 @@ mod windows_impl {
 
             next_deadline += frame_interval;
             // Overran the budget: snap forward so we don't flood the encoder
-            // with a catch-up burst (that reads as stutter with wallclock PTS).
+            // with a catch-up burst (that reads as stutter).
             let behind = Instant::now().saturating_duration_since(next_deadline);
             if behind > frame_interval {
                 next_deadline = Instant::now() + frame_interval;

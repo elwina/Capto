@@ -128,6 +128,8 @@ impl NativeAudioSession {
 
     pub fn stop(&mut self) {}
 
+    pub fn set_paused(&self, _paused: bool) {}
+
     pub fn levels(&self) -> AudioLevels {
         AudioLevels::default()
     }

@@ -135,6 +135,8 @@ struct BootedPipeline {
     video_pump: Option<DxgiRecordPump>,
     webcam: Option<WebcamCapture>,
     encoder: VideoEncoderKind,
+    /// When DXGI/WASAPI producers began feeding FFmpeg (before health check).
+    encode_started_at: std::time::Instant,
 }
 
 /// Open webcam (if needed) before FFmpeg so PiP frames exist from frame 0,
@@ -230,6 +232,10 @@ async fn boot_pipeline(
         }
     }
 
+    // Producers are live here — UI elapsed must match encode timeline, not the
+    // later return from check_started (which sleeps ~2.5s while frames already flow).
+    let encode_started_at = std::time::Instant::now();
+
     if let Err(error) = ffmpeg.check_started(&mut child, &stderr_log).await {
         if let Some(audio) = audio_session.as_mut() {
             audio.stop();
@@ -248,6 +254,7 @@ async fn boot_pipeline(
         video_pump,
         webcam,
         encoder,
+        encode_started_at,
     })
 }
 
@@ -467,6 +474,8 @@ impl RecordingSession {
         let hide_app = req.hide_app_while_recording;
         let output_path = req.output_path.clone();
         let encoder_name = pipeline.encoder.ffmpeg_name().to_string();
+        let encode_started_at = pipeline.encode_started_at;
+        let elapsed_ms = encode_started_at.elapsed().as_millis() as u64;
         *self.live.lock().await = Some(LiveRecording {
             child: pipeline.child,
             audio_session: pipeline.audio_session.take(),
@@ -474,7 +483,7 @@ impl RecordingSession {
             _webcam: pipeline.webcam.take(),
             stderr_log: pipeline.stderr_log,
             output_path: out,
-            started_at: std::time::Instant::now(),
+            started_at: encode_started_at,
             paused_accum_ms: 0,
             pause_started: None,
             encoder: pipeline.encoder,
@@ -485,7 +494,7 @@ impl RecordingSession {
         Ok((
             SessionSnapshot {
                 state: SessionState::Recording,
-                elapsed_ms: 0,
+                elapsed_ms,
                 output_path: Some(output_path),
                 last_error: None,
                 encoder: Some(encoder_name),
@@ -503,8 +512,13 @@ impl RecordingSession {
         if rec.pause_started.is_some() {
             return Err(CoreError::InvalidState("already paused".into()));
         }
-        // FFmpeg has no reliable pause; we track pause for UI elapsed and send 'c' is not available.
-        // Soft-pause: mark paused (stop/start would need restart). Document as UI elapsed pause.
+        // Stop feeding FFmpeg so encode timeline skips paused wall time.
+        if let Some(pump) = rec.video_pump.as_ref() {
+            pump.set_paused(true);
+        }
+        if let Some(audio) = rec.audio_session.as_ref() {
+            audio.set_paused(true);
+        }
         rec.pause_started = Some(std::time::Instant::now());
         drop(live);
         Ok(self.snapshot().await)
@@ -519,6 +533,12 @@ impl RecordingSession {
             rec.paused_accum_ms += p.elapsed().as_millis() as u64;
         } else {
             return Err(CoreError::InvalidState("not paused".into()));
+        }
+        if let Some(pump) = rec.video_pump.as_ref() {
+            pump.set_paused(false);
+        }
+        if let Some(audio) = rec.audio_session.as_ref() {
+            audio.set_paused(false);
         }
         drop(live);
         Ok(self.snapshot().await)

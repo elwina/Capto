@@ -1,11 +1,12 @@
 use anyhow::{bail, Context, Result};
 use std::path::{Path, PathBuf};
+#[cfg(not(windows))]
 use std::process::{Command, Stdio};
 
 /// Locate Capto desktop and open it via the OS shell (fire-and-forget).
 ///
-/// On Windows this uses `cmd /C start "" <exe>` so Capto is not a child of the CLI
-/// (avoids handle-inheritance hangs when agents redirect stdout/stderr).
+/// On Windows this uses `ShellExecuteW` so Capto does not inherit the CLI's
+/// redirected stdout/stderr (agents often capture JSON via pipes).
 pub fn open_desktop() -> Result<PathBuf> {
     let exe = normalize_spawn_path(find_capto_exe().context("Capto desktop executable not found")?);
     tracing::info!(path = %exe.display(), "opening Capto desktop");
@@ -21,21 +22,40 @@ pub fn spawn_capto() -> Result<PathBuf> {
 fn shell_open(exe: &Path) -> Result<()> {
     #[cfg(windows)]
     {
-        // `start` requires an (possibly empty) window title when the target is quoted.
-        let status = Command::new("cmd.exe")
-            .arg("/C")
-            .arg("start")
-            .arg("")
-            .arg("/D")
-            .arg(exe.parent().unwrap_or_else(|| Path::new(".")))
-            .arg(exe.as_os_str())
-            .stdin(Stdio::null())
-            .stdout(Stdio::null())
-            .stderr(Stdio::null())
-            .status()
-            .context("cmd start")?;
-        if !status.success() {
-            bail!("cmd start exited with {status}");
+        use std::os::windows::ffi::OsStrExt;
+        use windows::core::PCWSTR;
+        use windows::Win32::Foundation::HWND;
+        use windows::Win32::UI::Shell::ShellExecuteW;
+        use windows::Win32::UI::WindowsAndMessaging::SW_SHOWNORMAL;
+
+        // ShellExecute does not inherit the CLI's redirected stdout/stderr — critical when
+        // agents capture JSON via pipes (`$x = capto status`, Start-Process -Redirect*).
+        let file: Vec<u16> = exe.as_os_str().encode_wide().chain(Some(0)).collect();
+        let dir: Vec<u16> = exe
+            .parent()
+            .unwrap_or_else(|| Path::new("."))
+            .as_os_str()
+            .encode_wide()
+            .chain(Some(0))
+            .collect();
+        let operation: Vec<u16> = std::ffi::OsStr::new("open")
+            .encode_wide()
+            .chain(Some(0))
+            .collect();
+
+        let rc = unsafe {
+            ShellExecuteW(
+                HWND(std::ptr::null_mut()),
+                PCWSTR(operation.as_ptr()),
+                PCWSTR(file.as_ptr()),
+                PCWSTR::null(),
+                PCWSTR(dir.as_ptr()),
+                SW_SHOWNORMAL,
+            )
+        };
+        // Per MSDN, return value > 32 indicates success.
+        if (rc.0 as isize) <= 32 {
+            bail!("ShellExecuteW failed (code {})", rc.0 as isize);
         }
         return Ok(());
     }

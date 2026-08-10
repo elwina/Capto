@@ -44,6 +44,7 @@ pub struct NativeAudioSession {
     prepared: Vec<PreparedStream>,
     inputs: Vec<PcmInputSpec>,
     stop: Arc<AtomicBool>,
+    paused: Arc<AtomicBool>,
     handles: Vec<JoinHandle<()>>,
     levels: Arc<LevelMeters>,
 }
@@ -140,6 +141,7 @@ impl NativeAudioSession {
             prepared,
             inputs,
             stop: Arc::new(AtomicBool::new(false)),
+            paused: Arc::new(AtomicBool::new(false)),
             handles: Vec::new(),
             levels: Arc::new(LevelMeters::default()),
         }))
@@ -147,6 +149,11 @@ impl NativeAudioSession {
 
     pub fn inputs(&self) -> &[PcmInputSpec] {
         &self.inputs
+    }
+
+    /// Soft-pause: stop writing PCM so encode timeline skips paused time.
+    pub fn set_paused(&self, paused: bool) {
+        self.paused.store(paused, Ordering::Release);
     }
 
     /// Start every capture thread and wait until WASAPI is initialized.
@@ -162,6 +169,7 @@ impl NativeAudioSession {
             let device_id = prepared.device_id.clone();
             let direction = prepared.direction;
             let stop = Arc::clone(&self.stop);
+            let paused = Arc::clone(&self.paused);
             let levels = Arc::clone(&self.levels);
             let (ready_tx, ready_rx) = mpsc::sync_channel(1);
             ready_receivers.push(ready_rx);
@@ -173,9 +181,15 @@ impl NativeAudioSession {
                 .name(name.into())
                 .spawn(move || {
                     let error_tx = ready_tx.clone();
-                    if let Err(error) =
-                        capture_thread(listener, &device_id, direction, &stop, &levels, ready_tx)
-                    {
+                    if let Err(error) = capture_thread(
+                        listener,
+                        &device_id,
+                        direction,
+                        &stop,
+                        &paused,
+                        &levels,
+                        ready_tx,
+                    ) {
                         let _ = error_tx.try_send(Err(error.clone()));
                         tracing::error!(%error, ?direction, "WASAPI capture stopped");
                     }
@@ -353,6 +367,7 @@ fn capture_thread(
     device_id: &str,
     direction: EndpointDirection,
     stop: &AtomicBool,
+    paused: &AtomicBool,
     levels: &LevelMeters,
     ready: mpsc::SyncSender<std::result::Result<(), String>>,
 ) -> std::result::Result<(), String> {
@@ -461,6 +476,13 @@ fn capture_thread(
         }
 
         let now = Instant::now();
+        if paused.load(Ordering::Acquire) {
+            // Drop captured audio while paused; do not write so FFmpeg's
+            // sample clock (and video CFR) skip this wall time together.
+            queue.clear();
+            next_tick = now + Duration::from_millis(10);
+            continue;
+        }
         while now >= next_tick && !stop.load(Ordering::Acquire) {
             // Keep at most 200 ms queued. If capture falls behind, old samples
             // are less useful than staying synchronized with the video clock.
