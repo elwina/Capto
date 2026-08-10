@@ -21,6 +21,10 @@ Desktop.ini
 !.env.example
 .secrets/
 
+# Cloudflare / wrangler local vars
+cloudflare/.dev.vars
+cloudflare/.wrangler
+
 # Sidecar binaries (download/build locally; do not commit)
 apps/desktop/src-tauri/binaries/ffmpeg*
 apps/desktop/src-tauri/binaries/ffprobe*

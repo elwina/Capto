@@ -1,0 +1,4 @@
+# Local dev variables for wrangler (wrangler dev / wrangler .dev.vars).
+# Copy to .dev.vars to override. GitHub releases are public — leave empty.
+# GitHub Personal Access Token (optional, only if upstream becomes private).
+GH_TOKEN=

@@ -38,6 +38,7 @@ Do not name both `capto` — they would clash in `target/debug` and on case-inse
 | `docs/ARCHITECTURE.md` | Pipeline + control-plane contracts |
 | `docs/CLI.md` | CLI / agent JSON contract (EN + 中文) |
 | `website/` | Product landing page |
+| `cloudflare/` | Updater mirror Worker (check + download proxy) |
 
 ## Cloud vs local Windows
 

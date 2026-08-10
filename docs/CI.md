@@ -33,6 +33,31 @@ Local key (gitignored): `.secrets/capto.key` — do not commit. Rotate only if t
 
 Settings UI: **关于** tab — version, manual update check, bundled FFmpeg version, developer links.
 
+### Updater mirror (Cloudflare Worker)
+
+A free Cloudflare Worker ([`cloudflare/`](../cloudflare/)) proxies the GitHub
+update metadata and installer downloads for a faster CDN edge. Tauri updater
+`endpoints` are tried **in order** and only fall through on a non-2XX response,
+so we list the Worker first and GitHub second.
+
+- Worker routes: `GET /updates/latest.json` (rebuilds each `url` from the
+  manifest `version` into a `github.com/.../releases/download/<tag>/<file>`
+  browser URL pointed at the worker download route) and `GET /updates/download/*`
+  (streams a release asset). Rebuilding avoids `api.github.com`, which is
+  rate-limited (60/hr/IP); the browser URL has no rate limit.
+- Deploy: `cd cloudflare && npx wrangler login && npx wrangler deploy`, then put
+  the returned `*.workers.dev` URL first in `tauri.conf.json` → `plugins.updater.endpoints`.
+- Current endpoints (see [`tauri.conf.json`](../apps/desktop/src-tauri/tauri.conf.json)):
+
+```json
+"endpoints": [
+  "https://capto-update-proxy.elwina-vardal.workers.dev/updates/latest.json",
+  "https://github.com/elwina/Capto/releases/download/updater/latest.json"
+]
+```
+
+If the Worker is down/non-2XX, updates still work via the GitHub fallback.
+
 ## FFmpeg (security)
 
 Sidecar comes only from [`elwina/capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) Releases — never from PATH at runtime.
