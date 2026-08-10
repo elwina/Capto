@@ -58,6 +58,8 @@ Checks:
 | **x64** | `x86_64-pc-windows-msvc` | NSIS `.exe` | `<install>\cli\capto.exe` (+ user PATH) |
 | **arm64** | `aarch64-pc-windows-msvc` | NSIS `.exe` | `<install>\cli\capto.exe` (+ user PATH) |
 
+Install location is fixed to `%LOCALAPPDATA%\Capto` (no directory chooser). Custom template: `apps/desktop/src-tauri/windows/installer.nsi`.
+
 Job titles and release assets use **x64 / arm64**. The `*-windows-msvc` strings are only Rust target triples (Windows ABI). **MSI is not built** — NSIS setup exe only. The CLI is **not** published as a separate Release asset (`capto-windows-*.exe` retired).
 
 ## GitHub Actions versions

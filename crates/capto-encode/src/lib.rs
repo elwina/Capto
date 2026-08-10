@@ -284,7 +284,7 @@ impl FfmpegEncoder {
                     let err = summarize_ffmpeg_stderr(stderr_log.lock().await.trim());
                     let detail = if err.is_empty() {
                         format!(
-                            "ffmpeg exited immediately ({status}) with no stderr — restart Capto, then try encoder libx264 / disable mic & system audio"
+                            "ffmpeg exited immediately ({status}) with no stderr — fully quit Capto (including tray) and retry; if it persists try encoder libx264 / disable mic & system audio"
                         )
                     } else {
                         format!(

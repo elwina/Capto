@@ -374,6 +374,12 @@ pub async fn doctor(state: &AppState, port: u16) -> DoctorInfo {
     let ffmpeg_path = session
         .encoder()
         .map(|e| e.binary_path().to_string_lossy().into_owned());
+    // Path presence alone is not enough — a wedged Capto process can still
+    // fail to spawn ffmpeg (empty stderr / exit 1). Probe a real `-version`.
+    let ffmpeg_ok = match session.encoder() {
+        Some(enc) => enc.version_line().await.is_ok(),
+        None => false,
+    };
     let preferred = session
         .settings()
         .preferred_encoder
@@ -381,7 +387,7 @@ pub async fn doctor(state: &AppState, port: u16) -> DoctorInfo {
     DoctorInfo {
         os: std::env::consts::OS.into(),
         capture_backend: session.capture().platform_name().into(),
-        ffmpeg_ok: ffmpeg_path.is_some(),
+        ffmpeg_ok,
         ffmpeg_path,
         control_plane: true,
         pid: std::process::id(),

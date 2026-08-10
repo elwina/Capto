@@ -56,13 +56,15 @@ capto shot --source display
 ### Record
 
 ```bash
-capto doctor                    # optional; exit 2 → open / ask user
+capto doctor                    # optional; exit 2 → open / ask user; ffmpegOk must be true
 capto list displays             # optional
 capto record start --source display
 capto status                    # poll
 capto record stop
 capto outputs recent --limit 1
 ```
+
+If `record start` / `list encoders` fails with empty FFmpeg stderr: **fully quit Capto** (tray Quit), run `capto open`, then retry. A wedged desktop process can still answer `status` while failing to spawn FFmpeg.
 
 ### Settings
 
