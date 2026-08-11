@@ -27,6 +27,7 @@
   },
   "bundle": {
     "active": true,
+    "publisher": "Elwina Vardal",
     "targets": ["nsis"],
     "createUpdaterArtifacts": true,
     "icon": [
