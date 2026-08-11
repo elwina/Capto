@@ -633,6 +633,21 @@ mod tests {
         );
     }
 
+    #[test]
+    fn parse_ffmpeg_version_token_accepts_capto_branded_builds() {
+        // capto-ffmpeg builds with `--extra-version=capto`; the token must parse
+        // without strict-equality assumptions so `n9.0-capto` survives.
+        let branded = "ffmpeg version n9.0-capto Copyright (c) 2000-2026 the FFmpeg developers";
+        assert_eq!(
+            parse_ffmpeg_version_line(branded).as_deref(),
+            Some(branded)
+        );
+        assert_eq!(
+            parse_ffmpeg_version_token(branded).as_deref(),
+            Some("n9.0-capto")
+        );
+    }
+
     fn tempfile_dir() -> PathBuf {
         let nonce = std::time::SystemTime::now()
             .duration_since(std::time::UNIX_EPOCH)

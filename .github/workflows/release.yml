@@ -103,8 +103,9 @@ jobs:
           prerelease: ${{ startsWith(github.ref_name, 'v0.') }}
           args: --target ${{ matrix.target }} --bundles nsis
 
-  # v0.* releases are marked prerelease, so /releases/latest skips them.
-  # Keep a rolling tag `updater` with only latest.json (installer URLs still point at v*).
+  # v0.* tags were prerelease (v1+ are stable). Either way, keep a rolling
+  # `updater` tag holding only latest.json so the in-app check URL never
+  # changes and always points at the newest release.
   publish-updater-manifest:
     name: Publish updater manifest
     needs: release

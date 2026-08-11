@@ -7,7 +7,7 @@
 # Usage:
 #   .\scripts\download-ffmpeg.ps1
 #   .\scripts\download-ffmpeg.ps1 -TargetTriple aarch64-pc-windows-msvc
-#   .\scripts\download-ffmpeg.ps1 -Tag v0.1.0-n9.0
+#   .\scripts\download-ffmpeg.ps1 -Tag v1.0.0-n9.0
 #
 # Pin defaults live in `.github/capto-ffmpeg.env` (overridable via env / params).
 
@@ -41,7 +41,7 @@ if (-not $Repository) {
     $Repository = if ($env:CAPTO_FFMPEG_REPO) { $env:CAPTO_FFMPEG_REPO } elseif ($pinned["CAPTO_FFMPEG_REPO"]) { $pinned["CAPTO_FFMPEG_REPO"] } else { "elwina/capto-ffmpeg" }
 }
 if (-not $Tag) {
-    $Tag = if ($env:CAPTO_FFMPEG_TAG) { $env:CAPTO_FFMPEG_TAG } elseif ($pinned["CAPTO_FFMPEG_TAG"]) { $pinned["CAPTO_FFMPEG_TAG"] } else { "v0.1.0-n9.0" }
+    $Tag = if ($env:CAPTO_FFMPEG_TAG) { $env:CAPTO_FFMPEG_TAG } elseif ($pinned["CAPTO_FFMPEG_TAG"]) { $pinned["CAPTO_FFMPEG_TAG"] } else { "v1.0.0-n9.0" }
 }
 
 if (-not $TargetTriple) {

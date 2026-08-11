@@ -633,7 +633,7 @@ struct PlatformInfo {
 #[serde(rename_all = "camelCase")]
 struct FfmpegInfo {
     available: bool,
-    /// Capto FFmpeg release tag (e.g. `v0.1.0-n9.0`).
+    /// Capto FFmpeg release tag (e.g. `v1.0.0-n9.0`).
     bundle_version: Option<String>,
     /// Short FFmpeg version token from `ffmpeg -version`.
     ffmpeg_version: Option<String>,

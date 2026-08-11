@@ -12,9 +12,8 @@ CI and Release are intentionally separate: green CI does not publish; Release do
 
 ## Versioning
 
-- App / workspace version today: **0.5.0** (`Cargo.toml` workspace + `tauri.conf.json`)
-- Git tags: `v0.5.0`, … — `v0.*` releases are marked **prerelease**
-- First stable line: **1.0.0** (`v1.0.0`) when ready
+- App / workspace version today: **1.0.0** (`Cargo.toml` workspace + `tauri.conf.json`)
+- Git tags: `v1.0.0`, … — `v1.*` releases are **stable** (`v0.*` were prerelease)
 
 ## In-app updates (GitHub)
 
@@ -27,7 +26,7 @@ Desktop uses [`tauri-plugin-updater`](https://v2.tauri.app/plugin/updater/) with
 | Check URL | `https://github.com/elwina/Capto/releases/download/updater/latest.json` |
 | Installer URLs | Inside `latest.json`, pointing at the versioned `v*` release assets |
 
-`v0.*` tags are **prerelease**, so GitHub’s `/releases/latest` would skip them. Each Release therefore mirrors `latest.json` onto a rolling tag **`updater`** (manifest only). CDN / CF Worker mirrors can be added later as extra `endpoints` entries.
+Each Release mirrors `latest.json` onto a rolling tag **`updater`** (manifest only), keeping the in-app check URL stable across releases. CDN / CF Worker mirrors can be added later as extra `endpoints` entries.
 
 Local key (gitignored): `.secrets/capto.key` — do not commit. Rotate only if the private key is lost or leaked (existing installs cannot verify new signatures after a pubkey change unless you ship a bridge release).
 
