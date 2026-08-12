@@ -49,10 +49,7 @@ Function CaptoAppendCliPath
   ${EndIf}
 
   Call CaptoReadPathVar
-  ${IfErrors}
-    DetailPrint "Failed to read PATH — skipping PATH update"
-    Goto CaptoAppendCliPath_done
-  ${EndIf}
+  IfErrors CaptoAppendCliPath_read_failed
 
   StrCpy $1 ";$0;"
   ${StrLoc} $2 $1 ";$R9;" ">"
@@ -74,6 +71,10 @@ Function CaptoAppendCliPath
 
   Call CaptoWritePathVar
   DetailPrint "Added Capto CLI to PATH: $R9"
+  Goto CaptoAppendCliPath_done
+
+CaptoAppendCliPath_read_failed:
+  DetailPrint "Failed to read PATH — skipping PATH update"
 
 CaptoAppendCliPath_done:
   Pop $R9
@@ -113,10 +114,7 @@ Function un.CaptoRemoveCliPath
   ${EndIf}
 
   Call un.CaptoReadPathVar
-  ${IfErrors}
-    DetailPrint "Failed to read PATH — skipping PATH cleanup"
-    Goto CaptoRemoveCliPath_done
-  ${EndIf}
+  IfErrors CaptoRemoveCliPath_read_failed
 
   ${If} $0 == ""
     Goto CaptoRemoveCliPath_done
@@ -153,6 +151,10 @@ CaptoRemoveCliPath_finish:
 
   Call un.CaptoWritePathVar
   DetailPrint "Removed Capto CLI from PATH: $R9"
+  Goto CaptoRemoveCliPath_done
+
+CaptoRemoveCliPath_read_failed:
+  DetailPrint "Failed to read PATH — skipping PATH cleanup"
 
 CaptoRemoveCliPath_done:
   Pop $5
