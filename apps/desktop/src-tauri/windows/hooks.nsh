@@ -49,6 +49,10 @@ Function CaptoAppendCliPath
   ${EndIf}
 
   Call CaptoReadPathVar
+  ${IfErrors}
+    DetailPrint "Failed to read PATH — skipping PATH update"
+    Goto CaptoAppendCliPath_done
+  ${EndIf}
 
   StrCpy $1 ";$0;"
   ${StrLoc} $2 $1 ";$R9;" ">"
@@ -58,7 +62,8 @@ Function CaptoAppendCliPath
   ${EndIf}
 
   ${If} $0 == ""
-    StrCpy $0 "$R9"
+    DetailPrint "PATH is empty — skipping PATH update (refusing to overwrite)"
+    Goto CaptoAppendCliPath_done
   ${Else}
     StrCpy $2 $0 1 -1
     ${If} $2 == ";"
@@ -108,6 +113,10 @@ Function un.CaptoRemoveCliPath
   ${EndIf}
 
   Call un.CaptoReadPathVar
+  ${IfErrors}
+    DetailPrint "Failed to read PATH — skipping PATH cleanup"
+    Goto CaptoRemoveCliPath_done
+  ${EndIf}
 
   ${If} $0 == ""
     Goto CaptoRemoveCliPath_done
@@ -135,6 +144,11 @@ CaptoRemoveCliPath_finish:
   StrCpy $2 $0 1 -1
   ${If} $2 == ";"
     StrCpy $0 $0 -1
+  ${EndIf}
+
+  ${If} $0 == ""
+    DetailPrint "PATH is empty after cleanup — skipping write"
+    Goto CaptoRemoveCliPath_done
   ${EndIf}
 
   Call un.CaptoWritePathVar
