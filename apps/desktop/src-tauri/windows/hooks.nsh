@@ -2,168 +2,28 @@
 ; Only `$INSTDIR\cli` is added (never `$INSTDIR`), so Capto.exe cannot shadow `capto`
 ; on case-insensitive Windows.
 ;
+; PATH manipulation uses the EnVar NSIS plugin. EnVar reads/writes the registry
+; through the Win32 API, so it is not limited by NSIS_MAX_STRLEN (1024 bytes) and
+; will never truncate or overwrite a long user PATH. It also de-dupes on add and
+; removes exactly on delete.
+;
+; The plugin DLL lives at `nsis\plugins\x86-unicode\EnVar.dll` next to this file.
+; `!addplugindir` must appear before any EnVar command in the generated installer,
+; so it goes here at the top (Tauri's installer.nsi includes this file via an
+; absolute path and already calls `!addplugindir` for its own plugins).
+;
 ; This file is !include'd after StrFunc.nsh + ${StrLoc} in installer.nsi, but before
 ; PRODUCTNAME / UNINSTKEY / INSTALLMODE. Anything needing those defines must live in
 ; NSIS_HOOK_* macros (expanded later).
 ;
 ; Wired from tauri.conf.json → bundle.windows.nsis.installerHooks
 
+!addplugindir "${__FILEDIR__}\nsis\plugins\x86-unicode"
+
 !include "LogicLib.nsh"
 !include "WinMessages.nsh"
 
-; Uninstall section cannot Call StrLoc — need the un. variant.
-${UnStrLoc}
-
-Var CaptoPathIsMachine
-
-Function CaptoReadPathVar
-  ; in: CaptoPathIsMachine ; out: $0
-  ${If} $CaptoPathIsMachine == "1"
-    ReadRegStr $0 HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path"
-  ${Else}
-    ReadRegStr $0 HKCU "Environment" "Path"
-  ${EndIf}
-FunctionEnd
-
-Function CaptoWritePathVar
-  ; in: CaptoPathIsMachine, $0 = new Path
-  ${If} $CaptoPathIsMachine == "1"
-    WriteRegExpandStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path" $0
-  ${Else}
-    WriteRegExpandStr HKCU "Environment" "Path" $0
-  ${EndIf}
-  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-FunctionEnd
-
-; Adds $INSTDIR\cli to PATH (idempotent).
-Function CaptoAppendCliPath
-  Push $0
-  Push $1
-  Push $2
-  Push $R9
-
-  StrCpy $R9 "$INSTDIR\cli"
-  ${IfNot} ${FileExists} "$R9\capto.exe"
-    DetailPrint "Capto CLI missing at $R9\capto.exe — PATH not updated"
-    Goto CaptoAppendCliPath_done
-  ${EndIf}
-
-  Call CaptoReadPathVar
-  IfErrors CaptoAppendCliPath_read_failed
-
-  StrCpy $1 ";$0;"
-  ${StrLoc} $2 $1 ";$R9;" ">"
-  ${If} $2 != ""
-    DetailPrint "Capto CLI already on PATH: $R9"
-    Goto CaptoAppendCliPath_done
-  ${EndIf}
-
-  ${If} $0 == ""
-    DetailPrint "PATH is empty — skipping PATH update (refusing to overwrite)"
-    Goto CaptoAppendCliPath_done
-  ${Else}
-    StrCpy $2 $0 1 -1
-    ${If} $2 == ";"
-      StrCpy $0 $0 -1
-    ${EndIf}
-    StrCpy $0 "$0;$R9"
-  ${EndIf}
-
-  Call CaptoWritePathVar
-  DetailPrint "Added Capto CLI to PATH: $R9"
-  Goto CaptoAppendCliPath_done
-
-CaptoAppendCliPath_read_failed:
-  DetailPrint "Failed to read PATH — skipping PATH update"
-
-CaptoAppendCliPath_done:
-  Pop $R9
-  Pop $2
-  Pop $1
-  Pop $0
-FunctionEnd
-
-Function un.CaptoReadPathVar
-  ${If} $CaptoPathIsMachine == "1"
-    ReadRegStr $0 HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path"
-  ${Else}
-    ReadRegStr $0 HKCU "Environment" "Path"
-  ${EndIf}
-FunctionEnd
-
-Function un.CaptoWritePathVar
-  ${If} $CaptoPathIsMachine == "1"
-    WriteRegExpandStr HKLM "SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "Path" $0
-  ${Else}
-    WriteRegExpandStr HKCU "Environment" "Path" $0
-  ${EndIf}
-  SendMessage ${HWND_BROADCAST} ${WM_WININICHANGE} 0 "STR:Environment" /TIMEOUT=5000
-FunctionEnd
-
-; Removes $R9 from PATH (caller sets $R9 to the cli directory).
-Function un.CaptoRemoveCliPath
-  Push $0
-  Push $1
-  Push $2
-  Push $3
-  Push $4
-  Push $5
-
-  ${If} $R9 == ""
-    StrCpy $R9 "$INSTDIR\cli"
-  ${EndIf}
-
-  Call un.CaptoReadPathVar
-  IfErrors CaptoRemoveCliPath_read_failed
-
-  ${If} $0 == ""
-    Goto CaptoRemoveCliPath_done
-  ${EndIf}
-
-  StrCpy $1 ";$0;"
-CaptoRemoveCliPath_loop:
-  ${UnStrLoc} $3 $1 ";$R9;" ">"
-  ${If} $3 == ""
-    Goto CaptoRemoveCliPath_finish
-  ${EndIf}
-  StrCpy $4 $1 $3
-  StrLen $5 ";$R9;"
-  IntOp $3 $3 + $5
-  StrCpy $1 $1 "" $3
-  StrCpy $1 "$4;$1"
-  Goto CaptoRemoveCliPath_loop
-
-CaptoRemoveCliPath_finish:
-  StrCpy $0 $1
-  StrCpy $2 $0 1
-  ${If} $2 == ";"
-    StrCpy $0 $0 "" 1
-  ${EndIf}
-  StrCpy $2 $0 1 -1
-  ${If} $2 == ";"
-    StrCpy $0 $0 -1
-  ${EndIf}
-
-  ${If} $0 == ""
-    DetailPrint "PATH is empty after cleanup — skipping write"
-    Goto CaptoRemoveCliPath_done
-  ${EndIf}
-
-  Call un.CaptoWritePathVar
-  DetailPrint "Removed Capto CLI from PATH: $R9"
-  Goto CaptoRemoveCliPath_done
-
-CaptoRemoveCliPath_read_failed:
-  DetailPrint "Failed to read PATH — skipping PATH cleanup"
-
-CaptoRemoveCliPath_done:
-  Pop $5
-  Pop $4
-  Pop $3
-  Pop $2
-  Pop $1
-  Pop $0
-FunctionEnd
+Var /GLOBAL CaptoPathIsMachine
 
 !macro CaptoSetPathHive
   StrCpy $CaptoPathIsMachine "0"
@@ -174,20 +34,39 @@ FunctionEnd
       StrCpy $CaptoPathIsMachine "1"
     ${EndIf}
   !endif
+  ${If} $CaptoPathIsMachine == "1"
+    EnVar::SetHKLM
+  ${Else}
+    EnVar::SetHKCU
+  ${EndIf}
 !macroend
 
+; Adds $INSTDIR\cli to PATH (idempotent).
 !macro NSIS_HOOK_POSTINSTALL
   !insertmacro CaptoSetPathHive
-  Call CaptoAppendCliPath
+  EnVar::AddValue "Path" "$INSTDIR\cli"
+  Pop $0
+  ${If} $0 == 0
+    DetailPrint "Added Capto CLI to PATH: $INSTDIR\cli"
+  ${Else}
+    DetailPrint "EnVar::AddValue for $INSTDIR\cli returned $0"
+  ${EndIf}
   WriteRegStr SHCTX "${UNINSTKEY}" "CaptoCliPath" "$INSTDIR\cli"
 !macroend
 
+; Removes $INSTDIR\cli from PATH.
 !macro NSIS_HOOK_PREUNINSTALL
   !insertmacro CaptoSetPathHive
   ReadRegStr $R9 SHCTX "${UNINSTKEY}" "CaptoCliPath"
   ${If} $R9 == ""
     StrCpy $R9 "$INSTDIR\cli"
   ${EndIf}
-  Call un.CaptoRemoveCliPath
+  EnVar::DeleteValue "Path" $R9
+  Pop $0
+  ${If} $0 == 0
+    DetailPrint "Removed Capto CLI from PATH: $R9"
+  ${Else}
+    DetailPrint "EnVar::DeleteValue for $R9 returned $0"
+  ${EndIf}
   DeleteRegValue SHCTX "${UNINSTKEY}" "CaptoCliPath"
 !macroend
