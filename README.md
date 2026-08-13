@@ -1,4 +1,4 @@
-﻿<p align="center">
+<p align="center">
   <img src="apps/desktop/public/capto-mark.png" alt="Capto" width="220" />
 </p>
 
@@ -15,6 +15,7 @@
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-green?style=flat-square" alt="License" /></a>
   <a href="https://github.com/elwina/Capto/releases"><img src="https://img.shields.io/github/downloads/elwina/Capto/total?style=flat-square" alt="Downloads" /></a>
   <a href="https://www.npmjs.com/package/capto-agent-skill"><img src="https://img.shields.io/npm/v/capto-agent-skill?style=flat-square&label=capto-agent-skill" alt="npm" /></a>
+  <a href="https://www.npmjs.com/package/capto-dsh-plugin"><img src="https://img.shields.io/npm/v/capto-dsh-plugin?style=flat-square&label=capto-dsh-plugin" alt="npm" /></a>
   <img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4?style=flat-square&logo=windows&logoColor=white" alt="Windows" />
   <img src="https://img.shields.io/badge/stack-Tauri%202%20%7C%20Rust%20%7C%20React-9B7BFF?style=flat-square" alt="Stack" />
 </p>
@@ -33,12 +34,57 @@
 | 🎬 | **MP4 & GIF** — Record to MP4 (auto NVENC / QSV / AMF / libx264) or export GIF. |
 | ✨ | **Overlays** — Mouse-click highlights, keystroke overlay, webcam PiP, include-cursor, and live preview. |
 | 🎞️ | **Rebuilt FFmpeg sidecar (`capto-ffmpeg`)** — Capto-owned, pinned, attested FFmpeg embedded in the app. Encoding goes only through this bundle — not whatever is on `PATH`. |
-| 🤖 | **CLI + Agent Skill for AI** — Full `capto` control plane (JSON, stable exit codes) and [`capto-agent-skill`](https://www.npmjs.com/package/capto-agent-skill) so agents can doctor → record → stop → collect outputs. |
+| 🤖 | **CLI + Agent integrations** — Full `capto` control plane (JSON, stable exit codes) plus [`capto-agent-skill`](https://www.npmjs.com/package/capto-agent-skill) (Agent Skills) and [`capto-dsh-plugin`](https://www.npmjs.com/package/capto-dsh-plugin) (DeepSeek Harness tools) so agents can doctor → record → stop → collect outputs. |
 | 🔒 | **Open source · local · safe** — MIT, no upload SDKs, files stay on your machine. |
 
 ## Install
 
 Download the NSIS setup for your CPU (**x64** / **arm64**) from [Releases](https://github.com/elwina/Capto/releases). Installers embed verified FFmpeg from [`capto-ffmpeg`](https://github.com/elwina/capto-ffmpeg) and the `capto` CLI at `<install>\cli\capto.exe`, and add that `cli` folder to your user **PATH** so `capto` works in new terminals (not a separate download).
+
+### AI / agent support
+
+Capto ships two agent integrations. Both talk to the same local `capto` CLI control plane, so install the desktop app first (above), then pick your agent:
+
+**Agent Skill — [`capto-agent-skill`](https://www.npmjs.com/package/capto-agent-skill)**
+
+Skill docs for any [Agent Skills](https://agentskills.io)-compatible agent (Claude Code, Cursor, …):
+
+```bash
+npm install capto-agent-skill
+```
+
+The skill is auto-discovered from `node_modules/capto-agent-skill/skills/capto/SKILL.md` (agentskills / skills-npm convention) and teaches the agent the doctor → record → stop → collect-outputs workflow.
+
+**DeepSeek Harness plugin — [`capto-dsh-plugin`](https://www.npmjs.com/package/capto-dsh-plugin)**
+
+First-class `capto_*` tools (status / record / shot / config / outputs …) for a dsh profile:
+
+```bash
+# npm-managed profile: install …
+npm install --prefix ~/.dsh/profiles/web capto-dsh-plugin
+```
+
+…then enable it in the profile's `cordis.patch.yml`:
+
+```yaml
+- insert:
+    - id: capto
+      name: capto-dsh-plugin
+      config:
+        command: ['capto']            # or the absolute path to capto.exe
+        timeoutMs: 120000
+        noLaunch: false
+        autoOpen: false
+```
+
+…or use the official pnpm/bundle flow, which wires everything automatically via `dsh.bundle`:
+
+```bash
+dsh plugin --profile web add capto-dsh-plugin
+dsh --profile web --dump-config
+```
+
+Restart `dsh web` and the agent's toolset includes the `capto_*` tools. Config reference and tool list: [`packages/capto-dsh-plugin`](packages/capto-dsh-plugin).
 
 ## Develop
 
