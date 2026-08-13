@@ -1,10 +1,14 @@
 # Capto — Social Launch Copy (EN / 中文)
 
-Sizes verified against the **v1.0.0** release assets (GitHub API):
-`Capto_1.0.0_x64-setup.exe` = **10.14 MB** · `Capto_1.0.0_arm64-setup.exe` = **8.66 MB**
-(installer embeds the pinned FFmpeg sidecar + the `capto` CLI on PATH).
+**核心卖点（一切文案围绕它）**：
+> **把 capto skill 导入 WorkBuddy，AI 就能直接操控录屏** —— 说一句"录 30 秒屏幕"，agent 调本机
+> `capto` CLI 完成录制并把文件交给你。纯本地、10 MB、不上云。
 
-Targets: **X (Twitter)** · LinkedIn · 微博/即刻 · Mastodon. Every post ships in **English + 中文**.
+Supporting facts（支撑论据，非主钩子）:
+- `Capto_1.0.0_x64-setup.exe` = **10.14 MB**（arm64 8.66 MB），安装包自带钉死版本、可验证的 FFmpeg + CLI（GitHub API 实测）
+- Skill 是标准 Agent Skills（SKILL.md）结构，WorkBuddy / CodeBuddy / Claude Code / Cursor 通用
+- 另有 DeepSeek Harness 插件（14 个类型化 `capto_*` 工具）
+- 纯本地：无云、无账号、无遥测，MIT 开源
 
 ---
 
@@ -12,85 +16,71 @@ Targets: **X (Twitter)** · LinkedIn · 微博/即刻 · Mastodon. Every post sh
 
 **EN**
 
-> Meet **Capto** — a **10 MB** Windows screen recorder. 🪟
+> Your AI can control your screen recorder now. 🎬
 >
-> • Display / window / region capture, MP4 + GIF
-> • Auto NVENC / QSV / AMF / libx264
-> • Click & keystroke overlays, cursor toggle
-> • Bundled FFmpeg, zero cloud, MIT
+> Import the **capto** skill into WorkBuddy → the agent directly drives Capto: record display / window / region, take screenshots, export MP4 or GIF — all on your local machine.
 >
-> 10 MB installer. Everything included.
+> The app itself is just 10 MB. Local-only, MIT, no cloud.
 > 👉 https://github.com/elwina/Capto
-> #Windows #ScreenRecorder #OpenSource
+> #WorkBuddy #AgentSkills #AI #ScreenRecorder
 
 **中文**
 
-> Capto —— 只有 **10 MB** 的 Windows 录屏软件 🪟
+> 你的 AI 现在可以直接操控录屏了。🎬
 >
-> • 显示器 / 窗口 / 区域录制，MP4 + GIF
-> • 自动 NVENC / QSV / AMF / libx264 硬编码
-> • 点击与按键 Overlay、光标开关
-> • 内置 FFmpeg，纯本地，MIT 开源
+> 把 **capto** skill 导入 WorkBuddy → agent 直接驱动 Capto：录显示器 / 窗口 / 区域、截图、导出 MP4 / GIF——全在本机完成。
 >
-> 10 MB 安装包，开箱即用。
+> 应用本体只有 10 MB。纯本地，MIT，不上云。
 > 👉 https://github.com/elwina/Capto
-> #Windows #录屏 #开源
+> #WorkBuddy #AgentSkills #AI #录屏
 
 ---
 
-## 2. X — thread reply 1（跟帖 1：Agent 原生）
+## 2. X — thread reply 1（跟帖 1：三步用起来）
 
 **EN**
 
-> Capto is **agent-native** 🤖
+> How it works:
 >
-> A `capto` CLI (JSON, stable exit codes) over a localhost control plane means any AI agent can
-> `doctor → record → stop → collect outputs` in seconds.
+> 1. Install Capto — a 10 MB installer (FFmpeg + CLI included)
+> 2. `npm install capto-agent-skill`
+> 3. Import the skill into WorkBuddy
 >
-> • **Agent Skill** (SKILL.md, Agent Skills standard) — import into WorkBuddy / CodeBuddy / Claude Code / Cursor
-> • **DeepSeek Harness plugin** — 14 first-class `capto_*` tools in your dsh profile
+> Done. Now just ask: *"record the screen for 30 seconds"* or *"screenshot that window"* — the agent drives the local `capto` CLI and hands you the file. Fully local, zero cloud.
 >
-> npm: `capto-agent-skill` + `capto-dsh-plugin`
-> #AI #AgentSkills #DeepSeek #WorkBuddy
+> Works with CodeBuddy / Claude Code / Cursor too, plus a DeepSeek Harness plugin with 14 typed `capto_*` tools.
+> #WorkBuddy #AgentSkills
 
 **中文**
 
-> Capto 是 **Agent 原生** 的 🤖
+> 三步用起来：
 >
-> `capto` CLI（JSON 稳定退出码）+ 本机控制面，任何 AI agent 都能
-> `doctor → record → stop → 取输出` 一键走完。
+> 1. 安装 Capto —— 10 MB 安装包（含 FFmpeg + CLI）
+> 2. `npm install capto-agent-skill`
+> 3. 把 skill 导入 WorkBuddy
 >
-> • **Agent Skill**（SKILL.md 标准）——可直接导入 WorkBuddy / CodeBuddy / Claude Code / Cursor
-> • **DeepSeek Harness 插件** —— dsh profile 里的一等公民 `capto_*` 工具（14 个）
+> 完事。直接说：*"录 30 秒屏幕"* 或 *"截那个窗口的图"*——agent 驱动本机 `capto` CLI，把文件交给你。全本地，零上云。
 >
-> npm：`capto-agent-skill` + `capto-dsh-plugin`
-> #AI #AgentSkills #DeepSeek #WorkBuddy
+> 同样支持 CodeBuddy / Claude Code / Cursor，另有 DeepSeek Harness 插件（14 个类型化 `capto_*` 工具）。
+> #WorkBuddy #AgentSkills
 
 ---
 
-## 3. X — thread reply 2（跟帖 2：为什么 10 MB）
+## 3. X — thread reply 2（跟帖 2：为什么是本地 + 10 MB）
 
 **EN**
 
-> 10 MB is the *whole* deal: a custom-built, pinned, attestation-verified FFmpeg sidecar + the agent
-> CLI, inside one NSIS installer. No runtime, no bloat — a clean-room MIT spiritual successor to Captura.
+> Why local matters: recording stays on your machine. Capto is a local-only recorder — one 10 MB installer with a pinned, attestation-verified FFmpeg inside. No cloud upload, no accounts, no telemetry.
 >
-> ```bash
-> capto doctor      # env check
-> capto record start --source display
-> capto record stop
-> ```
+> AI does the boring parts (setup, files, naming) — Capto does the capture.
+> #Privacy #Windows
 
 **中文**
 
-> 10 MB 就是全部：自研、钉死版本、可验证的 FFmpeg 侧车 + agent CLI，一个 NSIS 安装包搞定。
-> 无运行时、无冗余。Captura 的干净房 MIT 精神续作。
+> 为什么必须本地：录制始终留在你机器上。Capto 是纯本地录屏——10 MB 安装包内含一份钉死版本、可验证的 FFmpeg。不上云、不注册、无遥测。
 >
-> ```bash
-> capto doctor      # 环境检查
-> capto record start --source display
-> capto record stop
-> ```
+> AI 干杂活（安装、找文件、命名），Capto 负责采集。
+> #隐私 #Windows
 
 ---
 
@@ -98,42 +88,40 @@ Targets: **X (Twitter)** · LinkedIn · 微博/即刻 · Mastodon. Every post sh
 
 **EN**
 
-> Capto v1.0 is out — a **10 MB Windows screen recorder** that fits entirely inside one installer,
-> FFmpeg and agent CLI included.
+> "Record the screen for 30 seconds." Your AI agent can do that now — if you give it a skill.
 >
-> It captures display / window / region to MP4 or GIF with automatic hardware encoding
-> (NVENC / QSV / AMF / libx264), click & keystroke overlays, cursor control, and a pinned,
-> attestation-verified FFmpeg sidecar. Local-only, MIT, no cloud, no telemetry.
+> **capto-agent-skill** turns any Agent Skills-compatible agent (WorkBuddy, CodeBuddy, Claude Code, Cursor) into a direct controller of a local Windows screen recorder:
 >
-> What makes it interesting for the AI crowd: Capto is **agent-native**. A `capto` CLI with a stable
-> JSON contract lets any agent drive the desktop recorder — and we ship both an Agent Skills package
-> (importable into WorkBuddy / CodeBuddy / Claude Code / Cursor) and a DeepSeek Harness plugin with
-> 14 typed `capto_*` tools.
+> - Import the skill → the agent calls the `capto` CLI (stable JSON contract over a localhost control plane)
+> - Record display / window / region, screenshots, MP4 + GIF — all on your machine
+> - The recorder behind it is **Capto**: a 10 MB local-only app (installer includes a pinned, verified FFmpeg). No cloud, no accounts, no telemetry, MIT.
+>
+> DeepSeek Harness users get the same power as a native plugin — 14 typed `capto_*` tools.
 >
 > Install: https://github.com/elwina/Capto/releases
 > Skill: https://www.npmjs.com/package/capto-agent-skill
 > DSH plugin: https://www.npmjs.com/package/capto-dsh-plugin
 >
-> #Windows #ScreenRecorder #OpenSource #AI #AgentSkills #DeepSeekHarness
+> #WorkBuddy #AgentSkills #AI #ScreenRecorder #Windows
 
 **中文**
 
-> Capto v1.0 发布了 —— 一个只有 **10 MB** 的 Windows 录屏软件，安装包自带 FFmpeg 与 agent CLI，
-> 全部塞进一个安装程序里。
+> "帮我录 30 秒屏幕。" 你的 AI agent 现在真的能做到——只要给它一个 skill。
 >
-> 支持显示器 / 窗口 / 区域录制，输出 MP4 或 GIF，自动硬件编码（NVENC / QSV / AMF / libx264），
-> 带点击与按键 Overlay、光标开关，以及一份版本钉死、可验证的 FFmpeg 侧车。纯本地、MIT、
-> 无云、无遥测。
+> **capto-agent-skill** 让任何兼容 Agent Skills 的 agent（WorkBuddy、CodeBuddy、Claude Code、Cursor）
+> 直接操控一台本机 Windows 录屏软件：
 >
-> 对 AI 生态更有意思的是：Capto 是 **Agent 原生**的。`capto` CLI 提供稳定的 JSON 契约，
-> 任何 agent 都能驱动桌面录制；我们还同时提供了 Agent Skills 包（可导入 WorkBuddy /
-> CodeBuddy / Claude Code / Cursor）和 DeepSeek Harness 插件（14 个类型化 `capto_*` 工具）。
+> - 导入 skill → agent 调用 `capto` CLI（本机控制面，稳定 JSON 契约）
+> - 录显示器 / 窗口 / 区域、截图、MP4 + GIF——全在你机器上完成
+> - 背后的录屏器是 **Capto**：一个只有 10 MB 的纯本地应用（安装包自带钉死版本、可验证的 FFmpeg）。无云、无账号、无遥测，MIT。
+>
+> DeepSeek Harness 用户则可用原生插件获得同等能力——14 个类型化 `capto_*` 工具。
 >
 > 安装：https://github.com/elwina/Capto/releases
 > Skill：https://www.npmjs.com/package/capto-agent-skill
 > DSH 插件：https://www.npmjs.com/package/capto-dsh-plugin
 >
-> #Windows #录屏 #开源 #AI #AgentSkills #DeepSeekHarness
+> #WorkBuddy #AgentSkills #AI #录屏 #Windows
 
 ---
 
@@ -141,37 +129,32 @@ Targets: **X (Twitter)** · LinkedIn · 微博/即刻 · Mastodon. Every post sh
 
 **中文（主）**
 
-> Capto —— 一个只有 **10 MB** 的 Windows 录屏软件 🪟
+> 你的 AI 现在能直接操控录屏了 🎬
 >
-> • 显示器 / 窗口 / 区域录制，MP4 + GIF
-> • 自动 NVENC / QSV / AMF / libx264 硬编码
-> • 点击与按键 Overlay、光标开关
-> • 内置 FFmpeg，纯本地，MIT 开源
+> 把 **capto** skill 导入 WorkBuddy → agent 直接驱动 Capto：录显示器 / 窗口 / 区域、截图、MP4 / GIF，全在本机完成。
 >
-> 10 MB 安装包，全部打包好，无需额外运行时。
+> 应用本体只有 10 MB，纯本地、MIT、不上云。
 > 👉 https://github.com/elwina/Capto
-> #Windows #录屏 #开源
+> #WorkBuddy #AgentSkills #AI #录屏
 
 **EN（备用）**
 
-> Capto — a **10 MB** Windows screen recorder 🪟
-> Display / window / region capture, MP4 + GIF, hardware encoding, overlays, bundled FFmpeg.
-> Local-only, MIT, agent-native (`capto` CLI + Agent Skill + DeepSeek Harness plugin).
+> Your AI can control your screen recorder now 🎬 Import the **capto** skill into WorkBuddy → the agent directly records display / window / region, takes screenshots, exports MP4/GIF — all local, 10 MB app, no cloud.
 > 👉 https://github.com/elwina/Capto
 
 ---
 
 ## Visual suggestions / 配图建议
 
-- **Card 1**: app logo + "10 MB" stat + "Windows screen recorder"（用 `apps/desktop/public/capto-mark.png`）
-- **Card 2**: a real recording screenshot（可用 `Videos\Capto` 里的输出）展示窗口/屏幕采集质量
-- **Card 3**: terminal snippet（`capto doctor` → `record start` → `stop`）突出 agent-native 卖点
-- Alt text: "Capto: a 10 MB local-only Windows screen recorder with agent integration."
+- **Card 1**: 对话截图 —— 在 WorkBuddy 里说"录 30 秒屏幕"，agent 执行并返回文件路径（最强钩子）
+- **Card 2**: "Import skill → direct control" 三步示意（install → npm skill → import）
+- **Card 3**: 10 MB 数据卡 + 应用 logo（支撑论据）
+- Alt text: "Ask your AI to record the screen — capto skill in WorkBuddy drives a local 10 MB recorder."
 
 ## Posting checklist / 发布清单
 
 - [ ] 确认网站 `https://elwina.github.io/Capto/` 可访问
-- [ ] X 主帖发布后置顶 24 h
+- [ ] X 主帖发布后置顶 24 h；配图优先用"对话操控"截图
 - [ ] 回复评论时带上 skill / plugin 的 npm 链接
 - [ ] 中文版同日同步到微博 / 即刻
-- [ ] LinkedIn 发布后顺手关注评论区互动
+- [ ] LinkedIn 发布后关注评论区互动
