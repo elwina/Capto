@@ -50,6 +50,15 @@ jobs:
           cargo build -p capto-cli
           .\scripts\copy-cli.ps1 -Profile debug
 
+      - name: Test capto-dsh-plugin against real CLI
+        shell: pwsh
+        run: |
+          # target/debug/capto.exe was built above; the plugin's real-CLI
+          # smoke check exercises the desktopUnavailable (exit 2) path on CI.
+          Push-Location packages/capto-dsh-plugin
+          npm ci --no-audit --no-fund
+          node test/smoke.mjs
+
       - name: cargo test --workspace
         run: cargo test --workspace --all-targets
 
@@ -123,13 +132,21 @@ jobs:
       - name: cargo check (desktop + cli)
         run: cargo check -p capto-app -p capto-cli --target ${{ matrix.target }}
 
-  skill-pack:
-    name: Agent skill package
+  packages:
+    name: Agent packages (skill + dsh plugin)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v6
         with:
           node-version: "24"
-      - name: npm pack dry-run
+      - name: npm pack dry-run (skill)
         run: npm pack ./packages/capto-agent-skill --dry-run
+      - name: Test capto-dsh-plugin (fake CLI)
+        working-directory: packages/capto-dsh-plugin
+        run: |
+          npm ci --no-audit --no-fund
+          node test/smoke.mjs
+      - name: npm pack dry-run (plugin)
+        working-directory: packages/capto-dsh-plugin
+        run: npm pack --dry-run

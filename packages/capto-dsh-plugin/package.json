@@ -1,0 +1,59 @@
+{
+  "name": "capto-dsh-plugin",
+  "version": "0.1.0",
+  "description": "DeepSeek Harness (dsh) plugin: first-class capto_* tools that drive the local-only Capto screen recorder through its CLI control plane",
+  "license": "MIT",
+  "author": "Elwina Vardal",
+  "type": "module",
+  "main": "src/index.js",
+  "exports": {
+    ".": "./src/index.js",
+    "./package.json": "./package.json"
+  },
+  "files": [
+    "src",
+    "README.md",
+    "README.zh.md",
+    "LICENSE",
+    "cordis.patch.yml"
+  ],
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "cordis",
+    "plugin",
+    "capto",
+    "screen-recorder",
+    "screen-capture",
+    "windows",
+    "agent"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/elwina/Capto.git",
+    "directory": "packages/capto-dsh-plugin"
+  },
+  "bugs": {
+    "url": "https://github.com/elwina/Capto/issues"
+  },
+  "homepage": "https://github.com/elwina/Capto/tree/main/packages/capto-dsh-plugin",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/schemastery": "^3.18.1"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "scripts": {
+    "test": "node test/smoke.mjs",
+    "prepublishOnly": "node test/smoke.mjs"
+  }
+}

@@ -1,0 +1,12 @@
+# capto-dsh-plugin bundle layer: inserts the capto tool plugin with neutral
+# defaults. A later layer (the profile's own cordis.patch.yml, or a --patch
+# overlay) overrides this row by id; a row's whole config is replaced, not
+# merged, so overrides must restate every key they want to keep.
+- insert:
+    - id: capto
+      name: capto-dsh-plugin
+      config:
+        command: ['capto']
+        timeoutMs: 120000
+        noLaunch: false
+        autoOpen: false
