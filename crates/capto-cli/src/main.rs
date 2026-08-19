@@ -1,5 +1,6 @@
 mod client;
 mod launch;
+mod resilience;
 
 use anyhow::{bail, Context, Result};
 use capto_core::{OutputFormat, Region, VideoSourceKind};

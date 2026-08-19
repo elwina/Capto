@@ -119,6 +119,7 @@ pub async fn start_recording(
     state: &AppState,
     args: RecordStartRequest,
 ) -> Result<SessionSnapshot, String> {
+    let t0 = std::time::Instant::now();
     if let Some(meter) = state.audio_meter.lock().await.take() {
         meter.stop();
     }
@@ -173,6 +174,10 @@ pub async fn start_recording(
         }
     }
     let _ = app.emit("session://state", &snap);
+    state
+        .metrics
+        .observe_ms("record_start_ms", t0.elapsed().as_millis() as u64);
+    state.metrics.incr("recordings_started");
     Ok(snap)
 }
 
@@ -217,6 +222,7 @@ pub async fn stop_recording(app: &AppHandle, state: &AppState) -> Result<Session
         let _ = win.set_focus();
     }
     let _ = app.emit("session://state", &snap);
+    state.metrics.incr("recordings_stopped");
     Ok(snap)
 }
 

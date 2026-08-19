@@ -1,15 +1,21 @@
 use anyhow::{bail, Context, Result};
-use capto_ipc::{clear_server_lock, is_pid_alive, read_server_lock, Envelope, ServerLock};
+use capto_ipc::{
+    clear_server_lock, is_pid_alive, read_server_lock, redact, Envelope, ServerLock,
+    REQUEST_ID_HEADER,
+};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
-use std::time::Duration;
+use std::time::{Duration, Instant};
+use uuid::Uuid;
 
 use crate::launch;
+use crate::resilience::{backoff_delays, BreakerConfig, CircuitBreaker};
 
 pub struct ControlClient {
     base: String,
     token: String,
     http: reqwest::Client,
+    breaker: std::sync::Mutex<CircuitBreaker>,
 }
 
 #[derive(Debug)]
@@ -17,6 +23,8 @@ pub struct HttpError {
     pub code: String,
     pub message: String,
 }
+
+const MAX_RETRIES: u32 = 2;
 
 impl ControlClient {
     pub async fn connect(auto_launch: bool) -> Result<Self> {
@@ -39,26 +47,67 @@ impl ControlClient {
         body: Option<Value>,
     ) -> Result<Value, HttpError> {
         let url = format!("{}{path}", self.base);
-        let mut req = self
-            .http
-            .request(method, &url)
-            .header("Authorization", format!("Bearer {}", self.token))
-            .header("Content-Type", "application/json");
-        if let Some(b) = body {
-            req = req.json(&b);
-        }
-        let resp = req.send().await.map_err(|e| HttpError {
-            code: "desktopUnavailable".into(),
-            message: e.to_string(),
-        })?;
-        let status = resp.status();
-        let envelope: Envelope<Value> = resp.json().await.map_err(|e| HttpError {
-            code: "desktopUnavailable".into(),
-            message: format!("invalid JSON from Capto: {e}"),
-        })?;
-        if envelope.ok {
-            Ok(envelope.data.unwrap_or(Value::Null))
-        } else {
+        let request_id = Uuid::new_v4().to_string();
+        // Only idempotent calls are retried: retrying a mutating POST that
+        // already reached the server could double-record. Reads are safe to
+        // retry across the ~2s connection window while the desktop restarts.
+        let retriable = method == reqwest::Method::GET;
+
+        for (attempt, backoff) in backoff_delays(MAX_RETRIES).iter().enumerate() {
+            {
+                let breaker = self.breaker.lock().expect("breaker lock");
+                if !breaker.allow(Instant::now()) {
+                    return Err(HttpError {
+                        code: "desktopUnavailable".into(),
+                        message:
+                            "Capto control plane unavailable (circuit open). Start Capto and retry."
+                                .into(),
+                    });
+                }
+            }
+
+            let mut req = self
+                .http
+                .request(method.clone(), &url)
+                .header("Authorization", format!("Bearer {}", self.token))
+                .header("Content-Type", "application/json")
+                .header(REQUEST_ID_HEADER, request_id.clone());
+            if let Some(b) = &body {
+                req = req.json(b);
+            }
+            let resp = match req.send().await {
+                Ok(r) => r,
+                Err(e) => {
+                    self.note_failure();
+                    if retriable && attempt < MAX_RETRIES as usize {
+                        tokio::time::sleep(*backoff).await;
+                        continue;
+                    }
+                    return Err(HttpError {
+                        code: "desktopUnavailable".into(),
+                        message: redact(&e.to_string()),
+                    });
+                }
+            };
+            let status = resp.status();
+            let envelope: Envelope<Value> = match resp.json().await {
+                Ok(e) => e,
+                Err(e) => {
+                    self.note_failure();
+                    if retriable && attempt < MAX_RETRIES as usize {
+                        tokio::time::sleep(*backoff).await;
+                        continue;
+                    }
+                    return Err(HttpError {
+                        code: "desktopUnavailable".into(),
+                        message: format!("invalid JSON from Capto: {}", redact(&e.to_string())),
+                    });
+                }
+            };
+            self.note_success();
+            if envelope.ok {
+                return Ok(envelope.data.unwrap_or(Value::Null));
+            }
             let err = envelope.error.unwrap_or_else(|| {
                 capto_ipc::ApiError::new(
                     if status.as_u16() == 409 {
@@ -69,10 +118,23 @@ impl ControlClient {
                     format!("HTTP {status}"),
                 )
             });
-            Err(HttpError {
+            return Err(HttpError {
                 code: err.code,
-                message: err.message,
-            })
+                message: redact(&err.message),
+            });
+        }
+        unreachable!("backoff_delays is non-empty for MAX_RETRIES > 0")
+    }
+
+    fn note_success(&self) {
+        if let Ok(mut breaker) = self.breaker.lock() {
+            breaker.on_success();
+        }
+    }
+
+    fn note_failure(&self) {
+        if let Ok(mut breaker) = self.breaker.lock() {
+            breaker.on_failure(Instant::now());
         }
     }
 
@@ -131,6 +193,7 @@ fn from_lock(lock: ServerLock) -> ControlClient {
             .timeout(Duration::from_secs(120))
             .build()
             .expect("reqwest client"),
+        breaker: std::sync::Mutex::new(CircuitBreaker::new(BreakerConfig::default())),
     }
 }
 

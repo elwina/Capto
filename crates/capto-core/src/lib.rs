@@ -1,4 +1,6 @@
 pub mod ffmpeg_args;
+pub mod flags;
+pub mod metrics;
 pub mod session;
 pub mod settings;
 

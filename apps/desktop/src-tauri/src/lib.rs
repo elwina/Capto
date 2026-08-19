@@ -19,6 +19,7 @@ use tauri_plugin_global_shortcut::{Code, GlobalShortcutExt, Modifiers, Shortcut,
 use tokio::sync::Mutex;
 
 mod cli_server;
+mod crashlog;
 mod record_overlay;
 mod session_svc;
 
@@ -34,6 +35,8 @@ pub struct AppState {
     /// this separate from saving settings so one unavailable binding never
     /// prevents the remaining bindings from being applied.
     pub hotkey_conflicts: std::sync::Mutex<Vec<String>>,
+    /// Local, privacy-first metrics registry (served at /v1/metrics).
+    pub metrics: capto_core::metrics::Metrics,
 }
 
 fn sidecar_dir(app: &AppHandle) -> Option<PathBuf> {
@@ -1073,6 +1076,7 @@ fn tray_labels(locale: &str) -> [&'static str; 6] {
 #[cfg_attr(mobile, tauri::mobile_entry_point)]
 pub fn run() {
     init_tracing();
+    crashlog::install_panic_hook();
     let mut builder = tauri::Builder::default();
 
     #[cfg(desktop)]
@@ -1103,11 +1107,14 @@ pub fn run() {
             let settings = AppSettings::load();
             let _ = settings.ensure_output_dir();
             let session = RecordingSession::new(settings.clone(), sidecar);
+            let metrics = capto_core::metrics::Metrics::new();
+            metrics.incr("app_started");
             app.manage(AppState {
                 session: Mutex::new(session),
                 overlay: Mutex::new(None),
                 audio_meter: Mutex::new(None),
                 hotkey_conflicts: std::sync::Mutex::new(Vec::new()),
+                metrics: metrics.clone(),
             });
 
             let [show_l, start_l, pause_l, stop_l, shot_l, quit_l] = tray_labels(&settings.locale);
@@ -1190,7 +1197,9 @@ pub fn run() {
 
             let register: Arc<dyn Fn(&AppHandle, &AppSettings) -> Vec<String> + Send + Sync> =
                 Arc::new(|app, settings| register_hotkeys(app, settings));
-            if let Err(e) = cli_server::start_control_plane(app.handle().clone(), register) {
+            if let Err(e) =
+                cli_server::start_control_plane(app.handle().clone(), register, metrics.clone())
+            {
                 tracing::error!(%e, "failed to start CLI control plane");
             }
 

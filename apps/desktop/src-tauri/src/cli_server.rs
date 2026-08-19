@@ -3,17 +3,21 @@
 use crate::session_svc;
 use crate::AppState;
 use axum::extract::{Query, State as AxumState};
-use axum::http::{HeaderMap, StatusCode};
-use axum::response::IntoResponse;
+use axum::http::{HeaderMap, HeaderValue, Request, StatusCode};
+use axum::middleware::{self, Next};
+use axum::response::{IntoResponse, Response};
 use axum::routing::{get, post};
 use axum::{Json, Router};
+use capto_core::flags::{self, CONTROL_PLANE_METRICS};
+use capto_core::metrics::Metrics;
 use capto_ipc::{
     clear_server_lock, write_server_lock, Envelope, OpenOutputsRequest, RecordStartRequest,
-    ServerLock, ShotRequest, LOCK_VERSION,
+    ServerLock, ShotRequest, LOCK_VERSION, REQUEST_ID_HEADER,
 };
 use serde::Deserialize;
 use serde_json::Value;
 use std::sync::Arc;
+use std::time::Instant;
 use tauri::{AppHandle, Manager};
 use uuid::Uuid;
 
@@ -22,6 +26,7 @@ struct HttpState {
     app: AppHandle,
     token: String,
     port: u16,
+    metrics: Metrics,
     register_hotkeys:
         Arc<dyn Fn(&AppHandle, &capto_core::AppSettings) -> Vec<String> + Send + Sync>,
 }
@@ -274,6 +279,75 @@ async fn outputs_open(
     }
 }
 
+/// Per-request telemetry middleware for the control plane:
+///
+/// - propagates/echoes an `x-request-id` (distributed_tracing)
+/// - records request counters + duration histograms into the local `Metrics`
+///   registry (metrics_collection)
+/// - logs a structured, scrubbed line: only method, path, status, duration
+///   and request id. Queries, auth headers and bodies never reach the log
+///   (log_scrubbing by construction).
+async fn telemetry_layer(
+    AxumState(metrics): AxumState<Metrics>,
+    req: Request<axum::body::Body>,
+    next: Next,
+) -> Response {
+    let method = req.method().clone().to_string();
+    let path = req.uri().path().to_string();
+    let request_id = req
+        .headers()
+        .get(REQUEST_ID_HEADER)
+        .and_then(|v| v.to_str().ok())
+        .filter(|v| !v.is_empty())
+        .map(str::to_owned)
+        .unwrap_or_else(|| Uuid::new_v4().to_string());
+
+    let started = Instant::now();
+    let resp = next.run(req).await;
+    let duration_ms = started.elapsed().as_millis() as u64;
+    let status = resp.status();
+
+    metrics.incr("http_requests_total");
+    metrics.observe_ms("http_request_duration_ms", duration_ms);
+    metrics.incr(&format!("http_status_{}", status.as_u16()));
+    tracing::info!(
+        request_id,
+        method,
+        path,
+        status = status.as_u16(),
+        duration_ms,
+        "control plane request"
+    );
+
+    let (mut parts, body) = resp.into_parts();
+    parts.headers.insert(
+        REQUEST_ID_HEADER,
+        HeaderValue::from_str(&request_id).unwrap_or_else(|_| HeaderValue::from_static("unknown")),
+    );
+    Response::from_parts(parts, body)
+}
+
+async fn metrics_handler(
+    AxumState(st): AxumState<HttpState>,
+    headers: HeaderMap,
+) -> impl IntoResponse {
+    if !check_auth(&headers, &st.token) {
+        return unauthorized().into_response();
+    }
+    let settings = session_svc::get_settings(&app_state(&st.app)).await;
+    if !flags::is_enabled(&settings, CONTROL_PLANE_METRICS) {
+        return (
+            StatusCode::NOT_FOUND,
+            Json(Envelope::<()>::err(
+                "notFound",
+                "metrics disabled by feature flag",
+            )),
+        )
+            .into_response();
+    }
+    Json(Envelope::ok(st.metrics.snapshot())).into_response()
+}
+
 fn build_router(state: HttpState) -> Router {
     Router::new()
         .route("/v1/status", get(status_handler))
@@ -291,6 +365,11 @@ fn build_router(state: HttpState) -> Router {
         .route("/v1/list/encoders", get(list_encoders))
         .route("/v1/outputs/recent", get(outputs_recent))
         .route("/v1/outputs/open", post(outputs_open))
+        .route("/v1/metrics", get(metrics_handler))
+        .layer(middleware::from_fn_with_state(
+            state.metrics.clone(),
+            telemetry_layer,
+        ))
         .with_state(state)
 }
 
@@ -300,6 +379,7 @@ pub fn start_control_plane(
     register_hotkeys: Arc<
         dyn Fn(&AppHandle, &capto_core::AppSettings) -> Vec<String> + Send + Sync,
     >,
+    metrics: Metrics,
 ) -> Result<u16, String> {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;
@@ -317,6 +397,7 @@ pub fn start_control_plane(
         app: app.clone(),
         token,
         port,
+        metrics,
         register_hotkeys,
     };
     let router = build_router(state);
@@ -340,4 +421,48 @@ pub fn start_control_plane(
 
 pub fn shutdown_control_plane() {
     clear_server_lock();
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::http::header::AUTHORIZATION;
+
+    fn auth_header(value: &str) -> HeaderMap {
+        let mut m = HeaderMap::new();
+        m.insert(AUTHORIZATION, HeaderValue::from_str(value).unwrap());
+        m
+    }
+
+    fn bearer(token: &str) -> HeaderMap {
+        auth_header(&format!("Bearer {token}"))
+    }
+
+    #[test]
+    fn auth_accepts_exact_token() {
+        assert!(check_auth(&bearer("s3cret-token"), "s3cret-token"));
+    }
+
+    #[test]
+    fn auth_rejects_missing_header() {
+        assert!(!check_auth(&HeaderMap::new(), "s3cret-token"));
+    }
+
+    #[test]
+    fn auth_rejects_wrong_token() {
+        assert!(!check_auth(&bearer("wrong"), "s3cret-token"));
+    }
+
+    #[test]
+    fn auth_rejects_non_bearer_scheme() {
+        assert!(!check_auth(
+            &auth_header("Basic dXNlcjpwYXNz"),
+            "s3cret-token"
+        ));
+    }
+
+    #[test]
+    fn auth_rejects_bare_bearer_without_value() {
+        assert!(!check_auth(&auth_header("Bearer"), "s3cret-token"));
+    }
 }

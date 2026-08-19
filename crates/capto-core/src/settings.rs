@@ -62,6 +62,13 @@ pub struct AppSettings {
     pub locale: String,
     pub hotkeys: Vec<HotkeyBinding>,
     pub overlays: OverlayConfig,
+    /// Explicitly enabled feature flags (empty = use declared defaults).
+    /// See `crate::flags` for the registry and docs/feature-flags.md.
+    #[serde(default)]
+    pub enabled_flags: Vec<String>,
+    /// Explicitly disabled feature flags (wins over `enabled_flags`).
+    #[serde(default)]
+    pub disabled_flags: Vec<String>,
 }
 
 impl Default for AppSettings {
@@ -95,6 +102,8 @@ impl Default for AppSettings {
             locale: "en".into(),
             hotkeys: default_hotkeys(),
             overlays: OverlayConfig::default(),
+            enabled_flags: Vec::new(),
+            disabled_flags: Vec::new(),
         }
     }
 }
