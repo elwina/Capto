@@ -1,0 +1,61 @@
+name: CI failure alert
+
+# Alerting + error-to-insight: when a required workflow (CI, Release,
+# Deploy site + docs) fails, open a GitHub issue (or bump the existing one)
+# so failures surface as tracked work instead of silent red X's. Uses only
+# the built-in GITHUB_TOKEN — no external service required.
+
+on:
+  workflow_run:
+    workflows: ["CI", "Release", "Deploy site + docs"]
+    types: [completed]
+
+permissions:
+  contents: read
+  issues: write
+
+jobs:
+  alert:
+    name: Open / update build-health issue
+    runs-on: ubuntu-latest
+    if: github.event.workflow_run.conclusion == 'failure'
+    steps:
+      - name: Create or comment on the build-health issue
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const run = context.payload.workflow_run;
+            const sha = run.head_sha ? run.head_sha.slice(0, 7) : 'unknown';
+            const title = `[build-health] ${run.name} failed on ${run.head_branch || 'unknown'}`;
+            const body =
+              `Automated alert: ${run.name} failed.\n\n` +
+              `- Run: ${run.html_url}\n` +
+              `- Attempt: ${run.run_number} · Event: ${run.event}\n` +
+              `- Created: ${run.created_at}\n` +
+              `- Commit: \`${sha}\`\n\n` +
+              `Inspect the run logs, fix the root cause, and close this issue.`;
+
+            const { owner, repo } = context.repo;
+            const { data: existing } = await github.rest.issues.listForRepo({
+              owner,
+              repo,
+              state: 'open',
+              labels: ['build-health'],
+            });
+            const match = existing.find((i) => i.title === title);
+            if (match) {
+              await github.rest.issues.createComment({
+                owner,
+                repo,
+                issue_number: match.number,
+                body: `Failed again — ${run.html_url} (attempt ${run.run_number})`,
+              });
+            } else {
+              await github.rest.issues.create({
+                owner,
+                repo,
+                title,
+                body,
+                labels: ['build-health'],
+              });
+            }

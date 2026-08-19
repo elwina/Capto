@@ -12,19 +12,26 @@
  * <tag>/<file>` browser URL — which has no rate limit and redirects to the CDN.
  *
  * Routes:
- *   GET /updates/latest.json       -> fetch GitHub latest.json and rewrite every
- *                                     `url` to this worker's download route
+ *   GET /updates/latest.json       -> stable channel (rolling `updater` tag)
+ *   GET /updates/canary.json       -> canary channel (rolling `canary` tag)
  *   GET /updates/download/*        -> stream a GitHub release asset
  *   OPTIONS + CORS preflight, 404 otherwise
+ *
+ * Channels (progressive rollout): stable users always resolve
+ * `latest.json`; testers/beta agents opt into `canary.json`, which reads the
+ * separate rolling `canary` release tag. Promote a canary to stable by
+ * publishing the same version's latest.json to the `updater` tag (see
+ * docs/CI.md).
  */
 
 const GITHUB_REPO = 'elwina/Capto';
 
 // The rolling tag that hosts only latest.json (see docs/CI.md).
 const UPDATER_TAG = 'updater';
+// Rolling canary tag for staged rollout (published by the maintainer).
+const CANARY_TAG = 'canary';
 
 const GITHUB_BASE = `https://github.com/${GITHUB_REPO}`;
-const UPSTREAM_LATEST = `${GITHUB_BASE}/releases/download/${UPDATER_TAG}/latest.json`;
 
 const DOWNLOAD_ROUTE = '/updates/download/';
 
@@ -93,14 +100,15 @@ function jsonResponse(body, status) {
   });
 }
 
-async function handleLatest(request, requestUrl) {
-  const cacheKey = new Request(`${requestUrl.origin}${DOWNLOAD_ROUTE}latest.json`, request);
+async function handleLatest(request, requestUrl, tag) {
+  const cacheKey = new Request(`${requestUrl.origin}${requestUrl.pathname}`, request);
   const cached = await cache.match(cacheKey);
   if (cached) return cached;
 
+  const upstreamLatest = `${GITHUB_BASE}/releases/download/${tag}/latest.json`;
   let upstream;
   try {
-    upstream = await fetch(UPSTREAM_LATEST, {
+    upstream = await fetch(upstreamLatest, {
       headers: { 'user-agent': 'capto-update-proxy' },
     });
   } catch (err) {
@@ -214,7 +222,10 @@ export default {
     }
 
     if (url.pathname.endsWith('/latest.json')) {
-      return handleLatest(request, url);
+      return handleLatest(request, url, UPDATER_TAG);
+    }
+    if (url.pathname.endsWith('/canary.json')) {
+      return handleLatest(request, url, CANARY_TAG);
     }
     if (url.pathname.startsWith(DOWNLOAD_ROUTE)) {
       return handleDownload(request, url);

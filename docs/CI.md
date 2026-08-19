@@ -4,9 +4,11 @@
 
 | Workflow | File | Trigger | Purpose |
 |----------|------|---------|---------|
-| **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR → `main` | Rust test + clippy, frontend `tsc`, `cargo check` for **x64 + ARM64**, FFmpeg pin download + attestation |
+| **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR → `main` | Rust test + clippy (`cargo build --timings` uploaded), frontend `tsc` + lint + jscpd + knip + bundle-size, `cargo check` for **x64 + ARM64**, FFmpeg pin download + attestation, devcontainer build |
 | **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg + CLI (`cli/capto.exe`); signed updater artifacts + rolling `updater` manifest |
 | **Pages** | [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) | push → `main`, or manual | Deploy **one** GitHub Pages artifact: `website/` at the site root (`https://elwina.github.io/Capto/`) + workspace rustdoc under `/docs/`; Cloudflare Pages (`https://capto.elwina.work/`) deploys the same `website/` via the CF dashboard Git integration |
+| **Droid** | [`.github/workflows/droid.yml`](../.github/workflows/droid.yml), [`.github/workflows/droid-review.yml`](../.github/workflows/droid-review.yml) | `@droid` mentions / PRs | AI code + security review (Factory Droid; requires `FACTORY_API_KEY`) |
+| **CI alert** | [`.github/workflows/ci-alert.yml`](../.github/workflows/ci-alert.yml) | `workflow_run` on CI/Release/Pages failures | Open/update a `[build-health]` GitHub issue when a required workflow fails (alerting + error→issue) |
 
 CI and Release are intentionally separate: green CI does not publish; Release does not replace day-to-day checks.
 
@@ -56,6 +58,31 @@ so we list the Worker first and GitHub second.
 ```
 
 If the Worker is down/non-2XX, updates still work via the GitHub fallback.
+
+### Canary channel (staged rollout)
+
+Progressive rollout for new releases:
+
+1. Publish an experimental build to a rolling `canary` release tag (with its
+   own `latest.json`) — e.g. `gh release create canary --prerelease` + upload
+   `latest.json`.
+2. Point testers/pilot agents at
+   `https://capto-update-proxy.elwina-vardal.workers.dev/updates/canary.json`
+   (the worker serves it from the `canary` tag).
+3. Validate the canary (record/QA + crash reports), then **promote**: publish
+   the same version's `latest.json` to the `updater` tag so stable users move
+   off canary automatically; close the canary tag when superseded.
+
+A bad canary never reaches stable users and can be pulled by deleting the
+`canary` tag / manifest.
+
+## Alerting on CI failure
+
+[`.github/workflows/ci-alert.yml`](../.github/workflows/ci-alert.yml) listens
+for failed `CI` / `Release` / `Deploy site + docs` runs and opens (or bumps) a
+`[build-health]` issue with the failing run URL — GitHub-native alerting that
+turns red CI into tracked, deduplicated work (no external service needed).
+
 
 ## Site + API docs hosting (GitHub Pages + Cloudflare Pages)
 

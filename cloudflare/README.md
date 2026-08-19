@@ -8,9 +8,18 @@ update checks and installer downloads get a faster CDN edge (helpful where
 
 | Route | Behaviour |
 |-------|-----------|
-| `GET /updates/latest.json` | Fetches `elwina/Capto` release `updater/latest.json`, rebuilds each `url` from the manifest `version` into a `github.com/.../releases/download/<tag>/<file>` browser URL, points it at this worker's download route, returns the JSON. |
+| `GET /updates/latest.json` | **Stable channel**: fetches `elwina/Capto` release tag `updater/latest.json`, rebuilds each `url` from the manifest `version` into a `github.com/.../releases/download/<tag>/<file>` browser URL, points it at this worker's download route, returns the JSON. |
+| `GET /updates/canary.json` | **Canary channel (progressive rollout)**: same as above but reads the rolling `canary` release tag, so a small tester cohort can opt in to new versions before stable promotion. |
 | `GET /updates/download/*`  | Streams a GitHub release asset through this worker (CF CDN caches it). |
 | `OPTIONS` | CORS preflight. |
+
+### Canary / staged rollout
+
+Publish an experimental build to a `canary` release tag (with its own
+`latest.json`), point beta testers or pilot agents at
+`https://capto-update-proxy.elwina-vardal.workers.dev/updates/canary.json`,
+then **promote** the same version to stable by publishing `latest.json` to the
+`updater` tag. Full procedure in `docs/CI.md`.
 
 ### Why we rebuild the download URL
 
