@@ -37,6 +37,9 @@ pub struct MetricsSnapshot {
     pub uptime_ms: u64,
     pub counters: Vec<CounterPoint>,
     pub durations: Vec<DurationPoint>,
+    /// Product-usage events: how many times each feature/action was used this
+    /// process lifetime (local form of product analytics — see docs/analytics.md).
+    pub usage: Vec<CounterPoint>,
 }
 
 #[derive(Default)]
@@ -50,6 +53,7 @@ struct Inner {
     started: Instant,
     counters: BTreeMap<String, u64>,
     durations: BTreeMap<String, DurationAgg>,
+    usage: BTreeMap<String, u64>,
 }
 
 impl Default for Inner {
@@ -58,6 +62,7 @@ impl Default for Inner {
             started: Instant::now(),
             counters: BTreeMap::new(),
             durations: BTreeMap::new(),
+            usage: BTreeMap::new(),
         }
     }
 }
@@ -93,6 +98,15 @@ impl Metrics {
         }
     }
 
+    /// Record that a feature/action was used once (product-usage analytics,
+    /// local form). Exposed under `usage` in `/v1/metrics` — see
+    /// docs/analytics.md.
+    pub fn incr_usage(&self, feature: &str) {
+        if let Ok(mut inner) = self.inner.lock() {
+            *inner.usage.entry(feature.to_string()).or_default() += 1;
+        }
+    }
+
     /// Observe a single sample (e.g. request duration) for a named series.
     pub fn observe_ms(&self, name: &str, ms: u64) {
         if let Ok(mut inner) = self.inner.lock() {
@@ -103,7 +117,7 @@ impl Metrics {
         }
     }
 
-    /// Snapshot the current counters/durations without disturbing them.
+    /// Snapshot the current counters/durations/usage without disturbing them.
     pub fn snapshot(&self) -> MetricsSnapshot {
         let inner = self.inner.lock().unwrap_or_else(|p| p.into_inner());
         let uptime_ms = inner.started.elapsed().as_millis() as u64;
@@ -126,10 +140,19 @@ impl Metrics {
                 max_ms: agg.max_ms,
             })
             .collect();
+        let usage = inner
+            .usage
+            .iter()
+            .map(|(name, count)| CounterPoint {
+                name: name.clone(),
+                count: *count,
+            })
+            .collect();
         MetricsSnapshot {
             uptime_ms,
             counters,
             durations,
+            usage,
         }
     }
 }
@@ -187,5 +210,27 @@ mod tests {
             Some(json["uptimeMs"].as_u64().unwrap())
         );
         assert_eq!(json["counters"][0]["name"], "recordings_started");
+        assert!(json.get("usage").is_some());
+    }
+
+    #[test]
+    fn usage_tracks_feature_events() {
+        let m = Metrics::new();
+        m.incr_usage("record.start");
+        m.incr_usage("record.start");
+        m.incr_usage("shot");
+        let snap = m.snapshot();
+        let rec = snap
+            .usage
+            .iter()
+            .find(|u| u.name == "record.start")
+            .expect("record.start usage present");
+        assert_eq!(rec.count, 2);
+        let shot = snap
+            .usage
+            .iter()
+            .find(|u| u.name == "shot")
+            .expect("shot usage present");
+        assert_eq!(shot.count, 1);
     }
 }

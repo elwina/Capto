@@ -115,13 +115,37 @@ async fn attach_dxgi_pump(
 
     tokio::spawn(async move {
         let mut stdin = stdin;
+        let pump_started = std::time::Instant::now();
+        let mut frames: u64 = 0;
+        let mut slow_writes: u64 = 0;
         while let Some(buf) = rx.recv().await {
+            frames += 1;
+            let write_started = std::time::Instant::now();
             if stdin.write_all(&buf).await.is_err() {
                 break;
+            }
+            let write_ms = write_started.elapsed().as_millis();
+            // Profiling instrumentation (see docs/profiling.md): a rawvideo
+            // write that blocks this long means capture is outrunning the
+            // encoder - the usual cause of dropped-frame / frozen-output
+            // reports. Enable with CAPTO_LOG=capto_core=debug.
+            if write_ms >= 250 {
+                slow_writes += 1;
+                tracing::debug!(
+                    write_ms,
+                    frames,
+                    "slow ffmpeg write - capture outrunning encoder"
+                );
             }
         }
         // Closing stdin signals EOF on the rawvideo input.
         drop(stdin);
+        tracing::debug!(
+            frames,
+            slow_writes,
+            elapsed_ms = pump_started.elapsed().as_millis() as u64,
+            "frame pump finished"
+        );
     });
 
     Ok(pump)

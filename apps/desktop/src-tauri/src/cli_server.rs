@@ -306,6 +306,7 @@ async fn telemetry_layer(
     let resp = next.run(req).await;
     let duration_ms = started.elapsed().as_millis() as u64;
     let status = resp.status();
+    let status_code = status.as_u16();
 
     metrics.incr("http_requests_total");
     metrics.observe_ms("http_request_duration_ms", duration_ms);
@@ -317,6 +318,15 @@ async fn telemetry_layer(
         status = status.as_u16(),
         duration_ms,
         "control plane request"
+    );
+    // Contextual error tracking: keep a scrubbed, capped trail of recent
+    // control-plane calls so a later crash report shows what led up to it.
+    // Only method/path/status/request-id are recorded - never bodies, query
+    // strings, or auth material.
+    capto_core::breadcrumbs::record_with_request(
+        "control-plane",
+        format!("{method} {path} -> {status_code}"),
+        Some(request_id.clone()),
     );
 
     let (mut parts, body) = resp.into_parts();

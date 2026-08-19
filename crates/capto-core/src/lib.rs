@@ -1,3 +1,4 @@
+pub mod breadcrumbs;
 pub mod ffmpeg_args;
 pub mod flags;
 pub mod metrics;

@@ -143,6 +143,11 @@ jobs:
         run: |
           .\scripts\scan-tech-debt.ps1 -OutFile tech-debt-report.txt
 
+      - name: pii_handling scan (emails / SSNs / cards / private keys)
+        shell: pwsh
+        run: |
+          .\scripts\scan-pii.ps1
+
       - name: agents_md_validation
         shell: pwsh
         run: |

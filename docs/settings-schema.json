@@ -1,0 +1,56 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://github.com/elwina/Capto/blob/main/docs/settings-schema.json",
+  "title": "Capto settings.json",
+  "description": "Data model of the persisted local settings file. Capto has no database by design (see docs/data.md); the serde type AppSettings (crates/capto-core/src/settings.rs) is the single source of truth and this file mirrors its serialized camelCase shape. Use it to validate or edit settings.json.",
+  "type": "object",
+  "properties": {
+    "outputDir": { "type": "string", "description": "Directory where recordings/screenshots are written." },
+    "outputFormat": { "type": "string", "enum": ["mp4", "gif", "audioOnly"] },
+    "fps": { "type": "integer", "minimum": 1, "description": "Target capture frame rate." },
+    "quality": { "type": "integer", "minimum": 1, "maximum": 100, "description": "Perceptual quality 1..100, mapped to encoder CRF." },
+    "includeCursor": { "type": "boolean" },
+    "preferredEncoder": { "type": ["string", "null"], "enum": ["h264Nvenc", "h264Qsv", "h264Amf", "libx264", "hevcNvenc", "hevcQsv", "hevcAmf", "libx265", "gif", null] },
+    "micDevice": { "type": ["string", "null"], "description": "Local microphone device label chosen by the user." },
+    "loopbackDevice": { "type": ["string", "null"], "description": "Local system-loopback audio device label." },
+    "micVolume": { "type": "integer", "minimum": 0, "maximum": 200 },
+    "loopbackVolume": { "type": "integer", "minimum": 0, "maximum": 200 },
+    "defaultSource": { "type": "string", "enum": ["display", "window", "region"] },
+    "defaultDisplayId": { "type": ["integer", "null"], "minimum": 0 },
+    "defaultWindowId": { "type": ["integer", "null"], "description": "Last picked window id (HWND)." },
+    "defaultWindowTitle": { "type": ["string", "null"] },
+    "defaultRegion": {
+      "type": ["object", "null"],
+      "properties": {
+        "x": { "type": "integer" },
+        "y": { "type": "integer" },
+        "width": { "type": "integer", "minimum": 0 },
+        "height": { "type": "integer", "minimum": 0 }
+      },
+      "required": ["x", "y", "width", "height"]
+    },
+    "hideAppWhileRecording": { "type": "boolean" },
+    "minimizeToTrayOnClose": { "type": "boolean" },
+    "showPreview": { "type": "boolean" },
+    "locale": { "type": "string", "description": "UI locale tag, e.g. 'en' or 'zh-CN'." },
+    "hotkeys": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "action": { "type": "string" },
+          "shortcut": { "type": "string", "description": "e.g. 'Ctrl+Shift+R'." },
+          "enabled": { "type": "boolean" }
+        },
+        "required": ["action", "shortcut", "enabled"]
+      }
+    },
+    "overlays": {
+      "type": "object",
+      "description": "Overlay config (mouse-click highlights, keystrokes, webcam PiP, cursor). Bounded by capto_overlay::OverlayConfig; kept open so it stays forward-compatible."
+    },
+    "enabledFlags": { "type": "array", "items": { "type": "string" }, "description": "Explicitly enabled feature flags (empty = declared defaults). See crates/capto-core/src/flags.rs." },
+    "disabledFlags": { "type": "array", "items": { "type": "string" }, "description": "Explicitly disabled feature flags (wins over enabledFlags)." }
+  },
+  "additionalProperties": false
+}

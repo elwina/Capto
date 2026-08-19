@@ -3,7 +3,10 @@
 Capto is a **purely local** screen recorder. This document states what Capto
 stores, what it never does, and how to delete your data. It exists so agents
 and maintainers change behavior with the privacy contract in mind
-(PII handling).
+(PII handling). For how personal data (e.g. screen content) is treated and
+guarded, see [docs/PII.md](PII.md); for local analytics, see
+[docs/analytics.md](analytics.md); for crash-report tracing, see
+[docs/crash-tracing.md](crash-tracing.md).
 
 ## What Capto stores on your machine
 
@@ -11,7 +14,7 @@ and maintainers change behavior with the privacy contract in mind
 |----------|----------|
 | `<config>/Capto/settings.json` | App settings (output dir, encoder prefs, hotkeys, feature flags). No screen content. |
 | `<config>/Capto/cli-server.json` | Control-plane lock (PID / port / random bearer token). Regenerated each launch; never leaves the machine. |
-| `<config>/Capto/crashes/crash-*.json` | On a crash: app version, OS, panic message, backtrace. Local only. |
+| `<config>/Capto/crashes/crash-*.json` | On a crash: panic subject, exact `file:line` location, captured backtrace, pid/uptime, active feature flags, and a capped trail of recent events (control-plane calls, session transitions, hotkeys) plus the last `x-request-id`. Local only. See [docs/crash-tracing.md](crash-tracing.md). |
 | Output folder (default `Videos/Capto`) | Your recordings / screenshots. |
 | Logs (stderr when `RUST_LOG` is set) | Diagnostic lines; secrets are scrubbed (see below). |
 
@@ -30,6 +33,21 @@ and maintainers change behavior with the privacy contract in mind
 Log lines never include request bodies, query strings, or the bearer token.
 `capto_ipc::redact` additionally masks `Bearer <token>` and token-like query
 values in any error/URL text that reaches logs.
+
+## Crash reports (contextual, local)
+
+On a panic Capto writes `crash-*.json` (feature flag `crash-reporting`) with
+the panic subject, exact `file:line` location, a captured backtrace,
+pid/uptime, active feature flags, and a capped **breadcrumb trail** of the
+events that led up to the crash — control-plane calls (`method path -> status`),
+session transitions, hotkey and lifecycle markers — plus the last
+`x-request-id` for log correlation. The trail is scrubbed by construction:
+only method/path/status and action names are recorded, never request bodies,
+query strings, or the bearer token. Nothing is transmitted anywhere; delete
+the `crashes/` folder at any time.
+
+See [docs/crash-tracing.md](crash-tracing.md) for the report schema and how an
+agent turns a crash report into a concrete code path.
 
 ## Feature flags relevant to data
 

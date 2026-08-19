@@ -950,10 +950,34 @@ fn register_hotkeys(app: &AppHandle, settings: &AppSettings) -> Vec<String> {
             let app2 = app_handle.clone();
             tauri::async_runtime::spawn(async move {
                 match action {
-                    HotkeyAction::StartRecording => hotkey_start(&app2).await,
-                    HotkeyAction::PauseRecording => hotkey_pause(&app2).await,
-                    HotkeyAction::StopRecording => hotkey_stop(&app2).await,
-                    HotkeyAction::TakeScreenshot => hotkey_screenshot(&app2).await,
+                    HotkeyAction::StartRecording => {
+                        capto_core::breadcrumbs::record("hotkey", "start_recording pressed");
+                        app2.state::<AppState>()
+                            .metrics
+                            .incr_usage("hotkey.start_recording");
+                        hotkey_start(&app2).await;
+                    }
+                    HotkeyAction::PauseRecording => {
+                        capto_core::breadcrumbs::record("hotkey", "pause_recording pressed");
+                        app2.state::<AppState>()
+                            .metrics
+                            .incr_usage("hotkey.pause_recording");
+                        hotkey_pause(&app2).await;
+                    }
+                    HotkeyAction::StopRecording => {
+                        capto_core::breadcrumbs::record("hotkey", "stop_recording pressed");
+                        app2.state::<AppState>()
+                            .metrics
+                            .incr_usage("hotkey.stop_recording");
+                        hotkey_stop(&app2).await;
+                    }
+                    HotkeyAction::TakeScreenshot => {
+                        capto_core::breadcrumbs::record("hotkey", "take_screenshot pressed");
+                        app2.state::<AppState>()
+                            .metrics
+                            .incr_usage("hotkey.take_screenshot");
+                        hotkey_screenshot(&app2).await;
+                    }
                 }
             });
         }) {
@@ -1109,6 +1133,7 @@ pub fn run() {
             let session = RecordingSession::new(settings.clone(), sidecar);
             let metrics = capto_core::metrics::Metrics::new();
             metrics.incr("app_started");
+            capto_core::breadcrumbs::record("lifecycle", "app_started");
             app.manage(AppState {
                 session: Mutex::new(session),
                 overlay: Mutex::new(None),
@@ -1197,10 +1222,17 @@ pub fn run() {
 
             let register: Arc<dyn Fn(&AppHandle, &AppSettings) -> Vec<String> + Send + Sync> =
                 Arc::new(|app, settings| register_hotkeys(app, settings));
-            if let Err(e) =
-                cli_server::start_control_plane(app.handle().clone(), register, metrics.clone())
-            {
-                tracing::error!(%e, "failed to start CLI control plane");
+            match cli_server::start_control_plane(app.handle().clone(), register, metrics.clone()) {
+                Ok(port) => {
+                    capto_core::breadcrumbs::record(
+                        "lifecycle",
+                        format!("control plane started on 127.0.0.1:{port}"),
+                    );
+                }
+                Err(e) => {
+                    tracing::error!(%e, "failed to start CLI control plane");
+                    capto_core::breadcrumbs::record("lifecycle", "control plane failed to start");
+                }
             }
 
             Ok(())

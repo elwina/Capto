@@ -101,6 +101,7 @@ pub async fn patch_settings(
     }
     let settings: AppSettings = serde_json::from_value(merged).map_err(|e| e.to_string())?;
     save_settings(app, state, settings.clone(), register_hotkeys).await?;
+    state.metrics.incr_usage("config.patch");
     Ok(settings)
 }
 
@@ -154,7 +155,10 @@ pub async fn start_recording(
     capto_capture::release_preview_session();
     let (snap, region) = match session.start(req).await {
         Ok(v) => v,
-        Err(e) => return Err(e.to_string()),
+        Err(e) => {
+            capto_core::breadcrumbs::record("session", "record start failed");
+            return Err(e.to_string());
+        }
     };
     if snap.hide_app {
         if let Some(win) = app.get_webview_window("main") {
@@ -178,6 +182,8 @@ pub async fn start_recording(
         .metrics
         .observe_ms("record_start_ms", t0.elapsed().as_millis() as u64);
     state.metrics.incr("recordings_started");
+    state.metrics.incr_usage("record.start");
+    capto_core::breadcrumbs::record("session", "record start ok");
     Ok(snap)
 }
 
@@ -189,6 +195,8 @@ pub async fn pause_recording(app: &AppHandle, state: &AppState) -> Result<Sessio
         overlay.pause(app);
     }
     let _ = app.emit("session://state", &snap);
+    capto_core::breadcrumbs::record("session", "record pause ok");
+    state.metrics.incr_usage("record.pause");
     Ok(snap)
 }
 
@@ -205,6 +213,8 @@ pub async fn resume_recording(
         }
     }
     let _ = app.emit("session://state", &snap);
+    capto_core::breadcrumbs::record("session", "record resume ok");
+    state.metrics.incr_usage("record.resume");
     Ok(snap)
 }
 
@@ -216,13 +226,21 @@ pub async fn stop_recording(app: &AppHandle, state: &AppState) -> Result<Session
         }
     }
     let session = state.session.lock().await;
-    let snap = session.stop().await.map_err(|e| e.to_string())?;
+    let snap = match session.stop().await {
+        Ok(s) => s,
+        Err(e) => {
+            capto_core::breadcrumbs::record("session", "record stop failed");
+            return Err(e.to_string());
+        }
+    };
     if let Some(win) = app.get_webview_window("main") {
         let _ = win.show();
         let _ = win.set_focus();
     }
     let _ = app.emit("session://state", &snap);
     state.metrics.incr("recordings_stopped");
+    state.metrics.incr_usage("record.stop");
+    capto_core::breadcrumbs::record("session", "record stop ok");
     Ok(snap)
 }
 
@@ -230,9 +248,15 @@ pub async fn take_screenshot(state: &AppState, args: ShotRequest) -> Result<Stri
     let session = state.session.lock().await;
     let target = capture_target(&args)?;
     let path = session.default_screenshot_path();
-    let saved = session
-        .take_screenshot(&target, &path)
-        .map_err(|e| e.to_string())?;
+    let saved = match session.take_screenshot(&target, &path) {
+        Ok(path) => path,
+        Err(e) => {
+            capto_core::breadcrumbs::record("session", "shot failed");
+            return Err(e.to_string());
+        }
+    };
+    capto_core::breadcrumbs::record("session", "shot ok");
+    state.metrics.incr_usage("shot");
     Ok(saved.to_string_lossy().into_owned())
 }
 
