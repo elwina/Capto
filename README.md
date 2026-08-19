@@ -121,7 +121,27 @@ Repo-hygiene checks (also enforced in CI):
 .\scripts\check-file-size.ps1   # fails on oversized source files
 .\scripts\scan-tech-debt.ps1    # fails on TODO/FIXME/HACK/XXX in source
 .\scripts\check-version-drift.ps1  # package.json and tauri.conf.json in lockstep
+.\scripts\scan-dead-flags.ps1   # fails on declared-but-unused feature flags
 ```
+
+Frontend build-quality gates (also enforced in CI):
+
+```powershell
+npm run duplicate:check --prefix apps/desktop   # jscpd copy-paste detection
+npm run build:analyze --prefix apps/desktop     # bundle visualization (dist/analyze.html)
+npm run bundle-size --prefix apps/desktop       # bundle-size budget gate
+```
+
+Interactive QA of a running desktop (agent-followable):
+
+```powershell
+.\scripts\qa-smoke.ps1                  # doctor/status/config/outputs round-trip
+.\scripts\qa-smoke.ps1 -RunRecordRoundtrip  # + a real record → stop → outputs
+```
+
+See [docs/QA.md](docs/QA.md) for the full interactive path,
+[docs/PRIVACY.md](docs/PRIVACY.md) for data handling, and
+[docs/feature-flags.md](docs/feature-flags.md) for feature toggles.
 ## Author
 
 **Elwina Vardal** · [elwina.work](https://www.elwina.work) · [GitHub](https://github.com/elwina)

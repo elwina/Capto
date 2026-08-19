@@ -79,9 +79,21 @@ npm run lint --prefix apps/desktop   # frontend ESLint (must pass in CI)
 npm run format:check --prefix apps/desktop  # frontend Prettier (must pass in CI)
 npm test --prefix apps/desktop       # frontend Vitest unit tests
 npm run test:coverage --prefix apps/desktop  # unit tests + enforced coverage gate (CI)
+npm run duplicate:check --prefix apps/desktop # jscpd copy-paste gate (CI)
+npm run build:analyze --prefix apps/desktop   # bundle report (dist/analyze.html + stats.json)
+npm run bundle-size --prefix apps/desktop     # bundle-size budget gate (CI)
 npm run tauri --prefix apps/desktop -- dev   # builds capto-app
 cargo run -p capto-cli -- doctor             # runs `capto`
 ```
+
+Interactive QA of a real desktop session (agent-followable):
+
+```powershell
+.\scripts\qa-smoke.ps1                  # doctor/status/config/outputs loop
+.\scripts\qa-smoke.ps1 -RunRecordRoundtrip  # + real record→stop→outputs
+```
+
+See [docs/QA.md](docs/QA.md) for the full path and [docs/security-testing.md](docs/security-testing.md) for the control-plane DAST probe.
 
 Place local FFmpeg + stage the CLI into the app bundle (required for `tauri build`):
 
@@ -100,7 +112,12 @@ Repo-hygiene guards (run when touching many files; enforced in CI):
 .\scripts\check-file-size.ps1   # no oversized source files
 .\scripts\scan-tech-debt.ps1    # no TODO/FIXME/HACK/XXX in source
 .\scripts\check-version-drift.ps1  # package.json vs tauri.conf.json version in lockstep
+.\scripts\scan-dead-flags.ps1   # every declared feature flag is still used
 ```
+
+Observability (local-only, privacy-first): the desktop exposes a loopback
+`GET /v1/metrics` (auth required) and writes `crash-*.json` reports on panic;
+`capto_*` logging is scrubbed via `capto_ipc::redact`. See [docs/PRIVACY.md](docs/PRIVACY.md) and [docs/feature-flags.md](docs/feature-flags.md).
 
 Optional local pre-commit hooks (recommended; opt-in per clone):
 
