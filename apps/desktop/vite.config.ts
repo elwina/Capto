@@ -5,8 +5,32 @@ import react from "@vitejs/plugin-react";
 const host = process.env.TAURI_DEV_HOST;
 
 // https://vite.dev/config/
-export default defineConfig(async () => ({
-  plugins: [react()],
+export default defineConfig(async ({ mode }) => {
+  // Bundle-size analysis: `npm run build:analyze` (vite --mode analyze)
+  // emits a dependency/asset visualization into ./dist/analyze.html plus a
+  // machine-readable report (stats.json) that scripts/bundle-size.mjs and CI
+  // use to enforce a size budget (see apps/desktop/scripts/bundle-size.mjs).
+  const { visualizer } = await import("rollup-plugin-visualizer").catch((e) => {
+    throw new Error("rollup-plugin-visualizer missing; run npm install", { cause: e });
+  });
+  const analyze =
+    mode === "analyze"
+      ? [
+          visualizer({
+            filename: "dist/analyze.html",
+            gzipSize: true,
+            template: "sunburst",
+          }),
+          visualizer({
+            filename: "dist/stats.json",
+            gzipSize: true,
+            template: "raw-data",
+          }),
+        ]
+      : [];
+
+  return {
+    plugins: [react(), ...analyze],
 
   // Vite options tailored for Tauri development and only applied in `tauri dev` or `tauri build`
   //
@@ -29,4 +53,5 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
-}));
+  };
+});

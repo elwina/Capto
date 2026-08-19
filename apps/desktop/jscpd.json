@@ -1,0 +1,14 @@
+{
+  "minLines": 5,
+  "minTokens": 60,
+  "threshold": 0,
+  "ignore": [
+    "dist",
+    "node_modules",
+    "coverage",
+    "src-tauri",
+    "public"
+  ],
+  "reporters": ["consoleFull"],
+  "pattern": "src/**/*.{ts,tsx}"
+}

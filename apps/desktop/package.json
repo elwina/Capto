@@ -13,7 +13,10 @@
     "test:coverage": "vitest run --coverage",
     "format": "prettier --write src",
     "format:check": "prettier --check src",
-    "knip": "knip"
+    "knip": "knip",
+    "duplicate:check": "jscpd --config jscpd.json",
+    "build:analyze": "vite build --mode analyze",
+    "bundle-size": "node scripts/bundle-size.mjs"
   },
   "dependencies": {
     "@tauri-apps/api": "^2",
@@ -39,8 +42,10 @@
     "eslint-plugin-react-hooks": "^5.2.0",
     "globals": "^17.11.0",
     "jsdom": "^30.0.1",
+    "jscpd": "^4.3.0",
     "knip": "^6.32.2",
     "prettier": "^3.9.6",
+    "rollup-plugin-visualizer": "^7.1.1",
     "typescript": "~5.8.3",
     "typescript-eslint": "^8.67.0",
     "vite": "^7.0.4",

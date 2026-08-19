@@ -69,6 +69,19 @@ jobs:
         # Warn-only for now; tighten to `-D warnings` once the workspace is clean.
         run: cargo clippy --workspace --all-targets
 
+      - name: Record workspace build timing
+        # cargo's native `--timings` emits an HTML+JSON report to
+        # target/cargo-timings/; upload it so build performance is tracked
+        # across runs (build_performance_tracking).
+        run: cargo build --workspace --timings=json
+
+      - name: Upload cargo build timing report
+        uses: actions/upload-artifact@v4
+        with:
+          name: cargo-build-timing
+          path: target/cargo-timings/
+          if-no-files-found: ignore
+
   frontend:
     name: Frontend lint + tests + typecheck
     runs-on: windows-latest
@@ -87,6 +100,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      - name: Duplicate code gate (jscpd)
+        run: npm run duplicate:check
       - name: Dead-code / unused-dependency scan (knip)
         run: npm run knip
       - name: Frontend tests (coverage + timing report)
@@ -98,6 +113,19 @@ jobs:
           path: apps/desktop/coverage/test-results.json
           if-no-files-found: error
       - run: npx tsc --noEmit
+      - name: Frontend production build
+        # Real vite build in CI: catches bundling breakage lint/tsc cannot.
+        run: npm run build
+      - name: Bundle-size gate (heavy dependency detection)
+        run: |
+          npm run build:analyze
+          npm run bundle-size
+      - name: Upload bundle-size report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-bundle-report
+          path: apps/desktop/dist/stats.json
+          if-no-files-found: error
 
   hygiene:
     name: Repo hygiene (file size + tech debt)
@@ -124,6 +152,11 @@ jobs:
         shell: pwsh
         run: |
           .\scripts\check-version-drift.ps1
+
+      - name: dead_feature_flag_detection scan
+        shell: pwsh
+        run: |
+          .\scripts\scan-dead-flags.ps1
 
       - name: Upload hygiene reports
         uses: actions/upload-artifact@v4
@@ -200,3 +233,20 @@ jobs:
       - name: npm pack dry-run (plugin)
         working-directory: packages/capto-dsh-plugin
         run: npm pack --dry-run
+
+  devcontainer:
+    name: Devcontainer builds + runs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Build devcontainer and smoke-test the toolchain
+        # Continuously verifies .devcontainer/devcontainer.json actually
+        # builds and runs (devcontainer_runnable) instead of only existing on
+        # disk. The smoke command only checks the toolchain (rust/node/pwsh);
+        # compiling native capture crates needs OS audio/display headers CI
+        # cannot provide.
+        uses: devcontainers/ci@v1
+        with:
+          imageName: ghcr.io/elwina/capto-devcontainer
+          cacheFrom: ghcr.io/elwina/capto-devcontainer:latest
+          runCmd: bash -lc 'cargo --version && node --version && pwsh --version'

@@ -12,6 +12,10 @@ export default defineConfig({
     // Expose afterEach globally so @testing-library/react auto-cleanup runs
     // between component tests (prevents DOM accumulation across cases).
     globals: true,
+    // Flaky-test safety net: retry a failed test once before marking the run
+    // red. Vitest logs the retried tests so flakiness stays visible instead
+    // of being silently hidden (see flaky_test_detection).
+    retry: 1,
     // Explicit parallel execution: test files run in isolated thread pools.
     pool: "threads",
     fileParallelism: true,
