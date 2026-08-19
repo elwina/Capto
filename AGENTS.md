@@ -68,6 +68,7 @@ cargo run -p capto-cli -- status
 ```bash
 npm install --prefix apps/desktop
 cargo test --workspace
+npm run lint --prefix apps/desktop   # frontend ESLint (must pass in CI)
 npm run tauri --prefix apps/desktop -- dev   # builds capto-app
 cargo run -p capto-cli -- doctor             # runs `capto`
 ```

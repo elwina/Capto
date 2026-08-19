@@ -67,7 +67,7 @@ jobs:
         run: cargo clippy --workspace --all-targets
 
   frontend:
-    name: Frontend typecheck
+    name: Frontend lint + typecheck
     runs-on: windows-latest
     defaults:
       run:
@@ -82,6 +82,7 @@ jobs:
           cache-dependency-path: apps/desktop/package-lock.json
 
       - run: npm ci
+      - run: npm run lint
       - run: npx tsc --noEmit
 
   check-targets:

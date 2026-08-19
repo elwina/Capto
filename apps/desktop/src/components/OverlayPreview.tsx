@@ -1,7 +1,6 @@
 import { useMemo, type CSSProperties } from "react";
 import { useTranslation } from "react-i18next";
-
-type OverlayConfig = Record<string, any>;
+import type { OverlaysSettings } from "../overlays";
 
 function posStyle(
   position: { anchor?: string; x?: number; y?: number } | undefined,
@@ -55,13 +54,15 @@ function posStyle(
 }
 
 /** Live mock preview of overlay layout (Captura-style). */
-export function OverlayPreview({ overlays }: { overlays: OverlayConfig }) {
+export function OverlayPreview({ overlays }: { overlays: OverlaysSettings }) {
   const { t } = useTranslation();
   const mouse = overlays.mouseClicks ?? {};
   const keys = overlays.keystrokes ?? {};
-  const webcam = overlays.webcam ?? {};
-  const texts = (overlays.texts ?? []) as any[];
-  const images = (overlays.images ?? []) as any[];
+  // Keep a stable identity for the webcam slice so camStyle's useMemo below
+  // does not recompute on every render when no webcam settings exist.
+  const webcam = useMemo(() => overlays.webcam ?? {}, [overlays.webcam]);
+  const texts = overlays.texts ?? [];
+  const images = overlays.images ?? [];
 
   const frameW = 640;
   const frameH = 360;

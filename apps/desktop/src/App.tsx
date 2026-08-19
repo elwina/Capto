@@ -14,6 +14,7 @@ import { usePreviewFrame } from "./hooks/usePreviewFrame";
 import { RegionSelector } from "./components/RegionSelector";
 import { WindowPickerOverlay, type PickedWindow } from "./components/WindowPickerOverlay";
 import i18n, { SUPPORTED_LOCALES } from "./i18n";
+import type { OverlaysSettings } from "./overlays";
 
 type VideoSource = "display" | "window" | "region";
 type OutputFormat = "mp4" | "gif" | "audioOnly";
@@ -86,7 +87,7 @@ interface AppSettings {
   showPreview: boolean;
   locale: string;
   hotkeys: HotkeyBinding[];
-  overlays: Record<string, any>;
+  overlays: OverlaysSettings;
 }
 
 function formatMs(ms: number) {
@@ -629,12 +630,14 @@ function MainApp() {
 
   function patchOverlay(path: string, value: unknown) {
     if (!settings) return;
-    const nextOverlays = structuredClone(settings.overlays ?? {});
+    const nextOverlays = structuredClone(settings.overlays ?? {}) as OverlaysSettings;
     const segs = path.split(".");
-    let cur: any = nextOverlays;
+    // Dotted-path traversal into the (loose) overlay blob. Nested segments are
+    // bridged through Record<string, unknown>; leaf values are written verbatim.
+    let cur: Record<string, unknown> = nextOverlays;
     for (let i = 0; i < segs.length - 1; i++) {
       cur[segs[i]] ??= {};
-      cur = cur[segs[i]];
+      cur = cur[segs[i]] as Record<string, unknown>;
     }
     cur[segs[segs.length - 1]] = value;
     void saveSettings({ ...settings, overlays: nextOverlays });

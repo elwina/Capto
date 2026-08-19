@@ -1,14 +1,13 @@
 import { useTranslation } from "react-i18next";
 import { OverlayPreview } from "./OverlayPreview";
-
-type OverlayConfig = Record<string, any>;
+import type { OverlaysSettings } from "../overlays";
 
 export function OverlayPanel({
   overlays,
   onChange,
 }: {
-  overlays: OverlayConfig;
-  onChange: (next: OverlayConfig) => void;
+  overlays: OverlaysSettings;
+  onChange: (next: OverlaysSettings) => void;
 }) {
   const { t } = useTranslation();
   const mouse = overlays.mouseClicks ?? {};
@@ -17,8 +16,10 @@ export function OverlayPanel({
   function patch(path: string, value: unknown) {
     const next = structuredClone(overlays);
     const segs = path.split(".");
-    let cur: any = next;
-    for (let i = 0; i < segs.length - 1; i++) cur = cur[segs[i]];
+    let cur: Record<string, unknown> = next;
+    for (let i = 0; i < segs.length - 1; i++) {
+      cur = cur[segs[i]] as Record<string, unknown>;
+    }
     cur[segs[segs.length - 1]] = value;
     onChange(next);
   }
