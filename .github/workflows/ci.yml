@@ -67,7 +67,7 @@ jobs:
         run: cargo clippy --workspace --all-targets
 
   frontend:
-    name: Frontend lint + typecheck
+    name: Frontend lint + tests + typecheck
     runs-on: windows-latest
     defaults:
       run:
@@ -83,6 +83,7 @@ jobs:
 
       - run: npm ci
       - run: npm run lint
+      - run: npm test
       - run: npx tsc --noEmit
 
   check-targets:

@@ -40,9 +40,9 @@ export default tseslint.config(
     },
   },
 
-  // Vite build configs run under Node, not the browser.
+  // Vite/Vitest build configs run under Node, not the browser.
   {
-    files: ["vite.config.ts", "vite.config.*.ts"],
+    files: ["vite.config.ts", "vite.config.*.ts", "vitest.config.ts"],
     languageOptions: {
       ecmaVersion: 2022,
       sourceType: "module",
