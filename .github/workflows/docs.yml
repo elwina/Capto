@@ -25,6 +25,8 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
+      - name: Install system deps (ALSA for cpal/alsa-sys)
+        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev pkg-config
       - name: cargo doc
         run: cargo doc --workspace --no-deps --exclude capto-app
       - name: Upload Pages artifact
