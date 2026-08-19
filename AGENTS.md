@@ -114,6 +114,7 @@ See [docs/CI.md](docs/CI.md). Summary:
 
 - **CI** (`.github/workflows/ci.yml`): tests on push/PR — not a publisher
 - **Release** (`.github/workflows/release.yml`): tag `v*` → Windows NSIS for x64 + ARM64 with FFmpeg from `elwina/capto-ffmpeg` (pin in `.github/capto-ffmpeg.env`); signed updater artifacts; rolling `updater` release hosts `latest.json`
+- **Pages** (`.github/workflows/pages.yml`): push to `main` → single GitHub Pages artifact: `website/` at `https://elwina.github.io/Capto/` + workspace rustdoc at `/docs/`. Only this workflow may write the `github-pages` environment (do not add another deploy-pages workflow).
 - Current app version **1.0.0**; `v1.*` releases are **stable** (v0.* were prerelease)
 
 Also see:

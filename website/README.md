@@ -10,8 +10,12 @@ start website/index.html
 npx --yes serve website
 ```
 
-Live site: [https://elwina.github.io/Capto/](https://elwina.github.io/Capto/)
+Live site: [https://elwina.github.io/Capto/](https://elwina.github.io/Capto/) (API docs at [https://elwina.github.io/Capto/docs/](https://elwina.github.io/Capto/docs/))
 
-Deployed by [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) (GitHub Pages → **GitHub Actions**). Push to `main` under `website/`, or run the workflow manually.
+Deployed as part of [`.github/workflows/pages.yml`](../.github/workflows/pages.yml)
+(GitHub Pages → **GitHub Actions**, single artifact: this page at the site root
++ rustdoc under `/docs/`). Push to `main`, or run that workflow manually.
+Cloudflare Pages (`https://capto.elwina.work/`) deploys the same `website/` via
+the CF dashboard Git integration.
 
 Assets under `assets/` (mark + optional donate QR). Brand color is Capto purple on purpose.

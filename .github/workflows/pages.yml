@@ -1,0 +1,81 @@
+name: Deploy site + docs
+
+# Single source for GitHub Pages:
+#   https://elwina.github.io/Capto/        → static landing page from website/
+#   https://elwina.github.io/Capto/docs/   → rustdoc for the workspace (lib crates + CLI)
+# This is the ONLY workflow writing to the github-pages environment — previous
+# setup had deploy-website.yml and docs.yml both deploying the same Pages site,
+# so the later-finishing run silently replaced the homepage with the API docs.
+# Cloudflare Pages (https://capto.elwina.work/) is still driven by the CF
+# dashboard Git integration (website/ subdirectory), independent of this file.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    name: Deploy GitHub Pages (site + rustdoc)
+    # Windows: the workspace's native-dep crates (cpal/WASAPI) compile without
+    # any system packages, avoiding flaky Ubuntu apt mirrors entirely.
+    runs-on: windows-latest
+    timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Configure Pages
+        uses: actions/configure-pages@v6
+
+      - name: Stage static site (website/ → _site/)
+        shell: pwsh
+        run: |
+          $site = Join-Path (Get-Location) "_site"
+          New-Item -ItemType Directory -Force -Path $site | Out-Null
+          Copy-Item -Recurse -Force (Join-Path (Get-Location) "website\*") $site
+
+      - uses: dtolnay/rust-toolchain@stable
+
+      - name: Build rustdoc
+        run: cargo doc --workspace --no-deps --exclude capto-app
+
+      - name: Move rustdoc to _site/docs and ensure an index.html
+        shell: pwsh
+        run: |
+          $site = Join-Path (Get-Location) "_site"
+          $docs = Join-Path $site "docs"
+          New-Item -ItemType Directory -Force -Path $docs | Out-Null
+          Copy-Item -Recurse -Force (Join-Path (Get-Location) "target\doc\*") $docs
+          if (-not (Test-Path -LiteralPath (Join-Path $docs "index.html"))) {
+            $first = Get-ChildItem -LiteralPath $docs -Directory |
+              Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "index.html") } |
+              Sort-Object Name | Select-Object -First 1
+            if (-not $first) { throw "no crate documentation directories found" }
+            $href = $first.Name + "/"
+            $html = "<!DOCTYPE html><html><head><meta charset=`"utf-8`"><meta http-equiv=`"refresh`" content=`"0; url=$href`"><title>Capto API docs</title></head><body>Capto API docs &mdash; <a href=`"$href`">$($first.Name)</a></body></html>"
+            Set-Content -LiteralPath (Join-Path $docs "index.html") -Value $html -Encoding utf8
+            Write-Host "Wrote /docs/index.html -> $href"
+          } else {
+            Write-Host "cargo doc produced /docs/index.html"
+          }
+
+      - name: Upload artifact
+        uses: actions/upload-pages-artifact@v5
+        with:
+          path: _site
+
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v5

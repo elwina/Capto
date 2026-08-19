@@ -6,7 +6,7 @@
 |----------|------|---------|---------|
 | **CI** | [`.github/workflows/ci.yml`](../.github/workflows/ci.yml) | push/PR → `main` | Rust test + clippy, frontend `tsc`, `cargo check` for **x64 + ARM64**, FFmpeg pin download + attestation |
 | **Release** | [`.github/workflows/release.yml`](../.github/workflows/release.yml) | tag `v*` or manual | NSIS installers for both arches with **embedded** FFmpeg + CLI (`cli/capto.exe`); signed updater artifacts + rolling `updater` manifest |
-| **Website** | [`.github/workflows/deploy-website.yml`](../.github/workflows/deploy-website.yml) | push `website/**` → `main`, or manual | Deploy static `website/` to GitHub Pages (`https://elwina.github.io/Capto/`); Cloudflare Pages (`https://capto.elwina.work/`) deploys via the CF dashboard Git integration |
+| **Pages** | [`.github/workflows/pages.yml`](../.github/workflows/pages.yml) | push → `main`, or manual | Deploy **one** GitHub Pages artifact: `website/` at the site root (`https://elwina.github.io/Capto/`) + workspace rustdoc under `/docs/`; Cloudflare Pages (`https://capto.elwina.work/`) deploys the same `website/` via the CF dashboard Git integration |
 
 CI and Release are intentionally separate: green CI does not publish; Release does not replace day-to-day checks.
 
@@ -57,17 +57,24 @@ so we list the Worker first and GitHub second.
 
 If the Worker is down/non-2XX, updates still work via the GitHub fallback.
 
-## Website hosting (GitHub Pages + Cloudflare Pages)
+## Site + API docs hosting (GitHub Pages + Cloudflare Pages)
 
 The static landing page [`website/`](../website/) is deployed to **both** GitHub
 Pages and Cloudflare Pages (dual-active). GitHub Pages is driven by this repo's
-[`deploy-website.yml`](../.github/workflows/deploy-website.yml) on every push
-that touches `website/**`; Cloudflare Pages is driven by the **CF dashboard Git
-integration** (not by a workflow), so no `CLOUDFLARE_API_TOKEN` secret is needed.
+[`pages.yml`](../.github/workflows/pages.yml) on every push to `main` (or
+manual), and it deploys **one** artifact containing **both**:
+
+- site root `https://elwina.github.io/Capto/` → the `website/` landing page
+- `https://elwina.github.io/Capto/docs/` → rustdoc for the workspace lib crates
+  + CLI (`cargo doc --workspace --no-deps --exclude capto-app`)
+
+`pages.yml` is the *only* workflow that writes to the `github-pages`
+environment. Cloudflare Pages is driven by the **CF dashboard Git integration**
+(not by a workflow), so no `CLOUDFLARE_API_TOKEN` secret is needed.
 
 | Host | URL | Driver |
 |------|-----|--------|
-| GitHub Pages | `https://elwina.github.io/Capto/` | [`deploy-website.yml`](../.github/workflows/deploy-website.yml) `deploy` job (`actions/deploy-pages`) |
+| GitHub Pages | `https://elwina.github.io/Capto/` (site root) + `/docs/` (rustdoc) | [`pages.yml`](../.github/workflows/pages.yml) `deploy` job (`actions/deploy-pages`) |
 | Cloudflare Pages | `https://capto.elwina.work/` (primary) / `https://capto.pages.dev/` | CF dashboard → Workers & Pages → **Connect to Git** |
 
 ### Cloudflare Pages project (Git integration)
