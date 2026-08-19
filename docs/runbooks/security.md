@@ -52,6 +52,15 @@ worst case (assume compromise). A working-tree-only detection on a PR is low.
   unverified binaries.
 - `GH_TOKEN` / signing keys exist only as GitHub Actions secrets, never in the
   repo or `.env.example`.
+- **Branch protection** on `main`: required status checks (`CI`, `CodeQL`,
+  `Secret scanning`), force-pushes blocked, admins enforced (see
+  `docs/CI.md`). Keeps direct push; PRs must pass the three checks to merge.
+- **Droid review secret**: the Factory Droid workflows
+  (`.github/workflows/droid.yml`, `droid-review.yml`) read a `FACTORY_API_KEY`
+  Actions secret — a real key must **never** be committed; a missing secret
+  makes those jobs fail until it is added. Such a failure is therefore
+  expected until setup, and it does **not** block merges (it is not a
+  required check).
 
 ## Owner
 
