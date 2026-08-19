@@ -1,0 +1,25 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "extends": ["config:recommended"],
+  "timezone": "Asia/Shanghai",
+  "labels": ["dependencies"],
+  "lockFileMaintenance": {
+    "enabled": true,
+    "automerge": false
+  },
+  "minimumReleaseAge": "3 days",
+  "commitMessageAction": "chore(deps)",
+  "packageRules": [
+    {
+      "groupName": "Rust workspace dependencies",
+      "matchManagers": ["cargo"],
+      "matchUpdateTypes": ["patch", "minor"]
+    },
+    {
+      "groupName": "npm devDependencies",
+      "matchManagers": ["npm"],
+      "matchDepTypes": ["devDependencies"],
+      "matchUpdateTypes": ["patch", "minor"]
+    }
+  ]
+}
