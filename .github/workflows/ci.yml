@@ -70,10 +70,10 @@ jobs:
         run: cargo clippy --workspace --all-targets
 
       - name: Record workspace build timing
-        # cargo's native `--timings` emits an HTML+JSON report to
+        # cargo's native `--timings` flag writes a build timing report to
         # target/cargo-timings/; upload it so build performance is tracked
         # across runs (build_performance_tracking).
-        run: cargo build --workspace --timings=json
+        run: cargo build --workspace --timings
 
       - name: Upload cargo build timing report
         uses: actions/upload-artifact@v4
@@ -244,9 +244,11 @@ jobs:
         # builds and runs (devcontainer_runnable) instead of only existing on
         # disk. The smoke command only checks the toolchain (rust/node/pwsh);
         # compiling native capture crates needs OS audio/display headers CI
-        # cannot provide.
+        # cannot provide. push: never keeps it a pure build+run gate (this
+        # repo has no write access to the ghcr.io/elwina package).
         uses: devcontainers/ci@v0.3
         with:
           imageName: ghcr.io/elwina/capto-devcontainer
           cacheFrom: ghcr.io/elwina/capto-devcontainer:latest
+          push: never
           runCmd: bash -lc 'cargo --version && node --version && pwsh --version'
