@@ -105,12 +105,8 @@ fn find_capto_exe() -> Result<PathBuf> {
     let manifest = PathBuf::from(env!("CARGO_MANIFEST_DIR"));
     candidates.push(manifest.join("../../target/debug/capto-app.exe"));
     candidates.push(manifest.join("../../target/release/capto-app.exe"));
-    candidates.push(
-        manifest.join("../../apps/desktop/src-tauri/target/debug/capto-app.exe"),
-    );
-    candidates.push(
-        manifest.join("../../apps/desktop/src-tauri/target/release/capto-app.exe"),
-    );
+    candidates.push(manifest.join("../../apps/desktop/src-tauri/target/debug/capto-app.exe"));
+    candidates.push(manifest.join("../../apps/desktop/src-tauri/target/release/capto-app.exe"));
 
     if let Ok(local) = std::env::var("LOCALAPPDATA") {
         candidates.push(PathBuf::from(&local).join("Capto/Capto.exe"));
@@ -177,7 +173,8 @@ fn is_cli_binary_name(path: &Path) -> bool {
 fn paths_equal_ci(a: &Path, b: &Path) -> bool {
     #[cfg(windows)]
     {
-        a.to_string_lossy().eq_ignore_ascii_case(&b.to_string_lossy())
+        a.to_string_lossy()
+            .eq_ignore_ascii_case(&b.to_string_lossy())
     }
     #[cfg(not(windows))]
     {
@@ -204,8 +201,6 @@ mod tests {
     #[test]
     fn cli_binary_name_detected() {
         assert!(is_cli_binary_name(Path::new(r"C:\Capto\cli\capto.exe")));
-        assert!(!is_cli_binary_name(Path::new(
-            r"C:\Capto\capto-app.exe"
-        )));
+        assert!(!is_cli_binary_name(Path::new(r"C:\Capto\capto-app.exe")));
     }
 }

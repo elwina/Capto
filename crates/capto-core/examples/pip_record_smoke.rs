@@ -15,8 +15,8 @@ async fn main() {
         "capto-pip-smoke-{}.mp4",
         chrono::Local::now().format("%H%M%S")
     ));
-    let sidecar = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../apps/desktop/src-tauri/binaries");
+    let sidecar =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../apps/desktop/src-tauri/binaries");
 
     let mut overlays = OverlayConfig::default();
     overlays.webcam.enabled = true;

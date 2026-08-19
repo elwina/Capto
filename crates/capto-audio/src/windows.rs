@@ -182,13 +182,7 @@ impl NativeAudioSession {
                 .spawn(move || {
                     let error_tx = ready_tx.clone();
                     if let Err(error) = capture_thread(
-                        listener,
-                        &device_id,
-                        direction,
-                        &stop,
-                        &paused,
-                        &levels,
-                        ready_tx,
+                        listener, &device_id, direction, &stop, &paused, &levels, ready_tx,
                     ) {
                         let _ = error_tx.try_send(Err(error.clone()));
                         tracing::error!(%error, ?direction, "WASAPI capture stopped");
@@ -254,7 +248,9 @@ impl AudioMeterSession {
         for (stored_id, expected) in requested {
             let (direction, device_id) = parse_device_id(&stored_id)?;
             if direction.kind() != expected.kind() {
-                return Err(AudioError::Device(format!("audio endpoint has the wrong direction: {stored_id}")));
+                return Err(AudioError::Device(format!(
+                    "audio endpoint has the wrong direction: {stored_id}"
+                )));
             }
             let stop2 = Arc::clone(&stop);
             let levels2 = Arc::clone(&levels);
@@ -272,10 +268,18 @@ impl AudioMeterSession {
             match ready.recv_timeout(Duration::from_secs(5)) {
                 Ok(Ok(())) => {}
                 Ok(Err(message)) => return Err(AudioError::Device(message)),
-                Err(_) => return Err(AudioError::Transport("timed out starting audio meter".into())),
+                Err(_) => {
+                    return Err(AudioError::Transport(
+                        "timed out starting audio meter".into(),
+                    ))
+                }
             }
         }
-        Ok(Some(Self { stop, handles, levels }))
+        Ok(Some(Self {
+            stop,
+            handles,
+            levels,
+        }))
     }
 
     pub fn levels(&self) -> AudioLevels {
@@ -312,8 +316,11 @@ fn meter_thread(
     levels: &LevelMeters,
     ready: mpsc::SyncSender<std::result::Result<(), String>>,
 ) -> std::result::Result<(), String> {
-    initialize_mta().ok().map_err(|e| format!("COM initialization failed: {e}"))?;
-    let enumerator = DeviceEnumerator::new().map_err(|e| format!("create device enumerator: {e}"))?;
+    initialize_mta()
+        .ok()
+        .map_err(|e| format!("COM initialization failed: {e}"))?;
+    let enumerator =
+        DeviceEnumerator::new().map_err(|e| format!("create device enumerator: {e}"))?;
     let collection_direction = match direction {
         EndpointDirection::Capture => Direction::Capture,
         EndpointDirection::RenderLoopback => Direction::Render,
@@ -330,29 +337,58 @@ fn meter_thread(
         }
     }
     let device = matched.ok_or_else(|| format!("audio endpoint disappeared: {device_id}"))?;
-    let mut audio_client = device.get_iaudioclient().map_err(|e| format!("activate audio client: {e}"))?;
-    let desired_format = WaveFormat::new(32, 32, &SampleType::Float, SAMPLE_RATE as usize, CHANNELS as usize, None);
-    let (_, minimum_period) = audio_client.get_device_period().map_err(|e| format!("query device period: {e}"))?;
-    let mode = StreamMode::EventsShared { autoconvert: true, buffer_duration_hns: minimum_period };
+    let mut audio_client = device
+        .get_iaudioclient()
+        .map_err(|e| format!("activate audio client: {e}"))?;
+    let desired_format = WaveFormat::new(
+        32,
+        32,
+        &SampleType::Float,
+        SAMPLE_RATE as usize,
+        CHANNELS as usize,
+        None,
+    );
+    let (_, minimum_period) = audio_client
+        .get_device_period()
+        .map_err(|e| format!("query device period: {e}"))?;
+    let mode = StreamMode::EventsShared {
+        autoconvert: true,
+        buffer_duration_hns: minimum_period,
+    };
     audio_client
         .initialize_client(&desired_format, &Direction::Capture, &mode)
         .map_err(|e| format!("initialize 48 kHz stereo capture: {e}"))?;
-    let event = audio_client.set_get_eventhandle().map_err(|e| format!("create capture event: {e}"))?;
-    let capture = audio_client.get_audiocaptureclient().map_err(|e| format!("get capture client: {e}"))?;
-    audio_client.start_stream().map_err(|e| format!("start capture stream: {e}"))?;
+    let event = audio_client
+        .set_get_eventhandle()
+        .map_err(|e| format!("create capture event: {e}"))?;
+    let capture = audio_client
+        .get_audiocaptureclient()
+        .map_err(|e| format!("get capture client: {e}"))?;
+    audio_client
+        .start_stream()
+        .map_err(|e| format!("start capture stream: {e}"))?;
     let _ = ready.send(Ok(()));
     let mut packet = Vec::new();
     while !stop.load(Ordering::Acquire) {
         let _ = event.wait_for_event(20);
         loop {
-            let frames = capture.get_next_packet_size().map_err(|e| e.to_string())?.unwrap_or(0) as usize;
-            if frames == 0 { break; }
+            let frames = capture
+                .get_next_packet_size()
+                .map_err(|e| e.to_string())?
+                .unwrap_or(0) as usize;
+            if frames == 0 {
+                break;
+            }
             packet.resize(frames * BYTES_PER_FRAME, 0);
-            let (read, info) = capture.read_from_device(&mut packet).map_err(|e| e.to_string())?;
+            let (read, info) = capture
+                .read_from_device(&mut packet)
+                .map_err(|e| e.to_string())?;
             if !info.flags.silent {
                 let mut peak = 0.0f32;
                 for sample in packet[..read as usize * BYTES_PER_FRAME].chunks_exact(4) {
-                    peak = peak.max(f32::from_le_bytes([sample[0], sample[1], sample[2], sample[3]]).abs());
+                    peak = peak.max(
+                        f32::from_le_bytes([sample[0], sample[1], sample[2], sample[3]]).abs(),
+                    );
                 }
                 levels.update(direction, peak);
             }
@@ -433,9 +469,7 @@ fn capture_thread(
     // Windows inherits non-blocking from the listener; FFmpeg briefly not
     // reading (video init) then makes write_all fail with WSAEWOULDBLOCK
     // (10035) and we used to abort — killing mic/loopback for the whole take.
-    stream
-        .set_nonblocking(false)
-        .map_err(|e| e.to_string())?;
+    stream.set_nonblocking(false).map_err(|e| e.to_string())?;
     stream.set_nodelay(true).map_err(|e| e.to_string())?;
     stream
         .set_write_timeout(Some(Duration::from_millis(2_000)))

@@ -2,8 +2,7 @@ use crate::ffmpeg_args::{build_record_args, record_frame_size, RecordRequest, Re
 use crate::settings::{AppSettings, OutputFormat};
 use crate::{CoreError, Result};
 use capto_capture::{
-    create_default_backend, CaptureBackend, CaptureTarget, DxgiRecordPump, RecordPip,
-    WebcamCapture,
+    create_default_backend, CaptureBackend, CaptureTarget, DxgiRecordPump, RecordPip, WebcamCapture,
 };
 use capto_encode::{FfmpegEncoder, VideoEncoderKind};
 use chrono::Local;
@@ -175,9 +174,7 @@ async fn boot_pipeline(
             let device = device.map(str::to_owned);
             let w = cam.width.max(2);
             let h = cam.height.max(2);
-            move || {
-                capto_capture::take_webcam_for_record(device.as_deref(), w, h)
-            }
+            move || capto_capture::take_webcam_for_record(device.as_deref(), w, h)
         })
         .await
         .map_err(|e| CoreError::Message(e.to_string()))?

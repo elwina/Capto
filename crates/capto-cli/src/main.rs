@@ -4,9 +4,7 @@ mod launch;
 use anyhow::{bail, Context, Result};
 use capto_core::{OutputFormat, Region, VideoSourceKind};
 use capto_encode::VideoEncoderKind;
-use capto_ipc::{
-    ExitCode, OpenOutputsRequest, RecordStartRequest, ShotRequest,
-};
+use capto_ipc::{ExitCode, OpenOutputsRequest, RecordStartRequest, ShotRequest};
 use clap::{Parser, Subcommand, ValueEnum};
 use serde_json::{json, Value};
 use std::process::ExitCode as StdExitCode;
@@ -117,9 +115,7 @@ enum RecordAction {
 #[derive(Subcommand, Debug)]
 enum ConfigAction {
     /// Print full settings or a single key
-    Get {
-        key: Option<String>,
-    },
+    Get { key: Option<String> },
     /// Patch settings: `--json '{...}'` or `key=value` pairs
     Set {
         #[arg(long)]
@@ -176,7 +172,10 @@ async fn main() -> StdExitCode {
             if err.human {
                 eprintln!("{}: {}", err.code, err.message);
             } else {
-                println!("{}", serde_json::to_string_pretty(&envelope).unwrap_or_default());
+                println!(
+                    "{}",
+                    serde_json::to_string_pretty(&envelope).unwrap_or_default()
+                );
             }
             StdExitCode::from(code.as_i32() as u8)
         }
@@ -220,9 +219,7 @@ async fn run(cli: Cli) -> Result<(), CliError> {
         .await
         .map_err(|e| CliError {
             code: "desktopUnavailable".into(),
-            message: format!(
-                "{e:#}. Try `capto open`, or ask the user to open Capto, then retry"
-            ),
+            message: format!("{e:#}. Try `capto open`, or ask the user to open Capto, then retry"),
             exit_code: ExitCode::DesktopUnavailable,
             human,
         })?;
@@ -274,7 +271,10 @@ async fn run(cli: Cli) -> Result<(), CliError> {
         }
         Commands::Config { action } => match action {
             ConfigAction::Get { key } => {
-                let data = client.get("/v1/config").await.map_err(|e| map_http(e, human))?;
+                let data = client
+                    .get("/v1/config")
+                    .await
+                    .map_err(|e| map_http(e, human))?;
                 if let Some(k) = key {
                     let v = data
                         .get(&k)
@@ -286,7 +286,8 @@ async fn run(cli: Cli) -> Result<(), CliError> {
                 }
             }
             ConfigAction::Set { json, pairs } => {
-                let patch = build_config_patch(json, pairs).map_err(|e| usage(e.to_string(), human))?;
+                let patch =
+                    build_config_patch(json, pairs).map_err(|e| usage(e.to_string(), human))?;
                 client.patch_json("/v1/config", &patch).await
             }
             ConfigAction::Path => client.get("/v1/config/path").await,
@@ -307,11 +308,7 @@ async fn run(cli: Cli) -> Result<(), CliError> {
                     .await
             }
             OutputsAction::Open { path, last, folder } => {
-                let body = OpenOutputsRequest {
-                    path,
-                    last,
-                    folder,
-                };
+                let body = OpenOutputsRequest { path, last, folder };
                 client.post_json("/v1/outputs/open", &body).await
             }
         },
@@ -351,7 +348,10 @@ fn map_http(err: client::HttpError, human: bool) -> CliError {
 
 fn emit_ok(data: Value, human: bool) {
     if human {
-        println!("{}", serde_json::to_string_pretty(&data).unwrap_or_default());
+        println!(
+            "{}",
+            serde_json::to_string_pretty(&data).unwrap_or_default()
+        );
     } else {
         let envelope = json!({ "ok": true, "data": data });
         println!(

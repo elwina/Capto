@@ -532,8 +532,7 @@ fn find_ffmpeg_in_dir(dir: &Path) -> Option<PathBuf> {
                 return false;
             };
             let lower = name.to_ascii_lowercase();
-            lower.starts_with("ffmpeg-")
-                && (lower.ends_with(".exe") || !lower.contains('.'))
+            lower.starts_with("ffmpeg-") && (lower.ends_with(".exe") || !lower.contains('.'))
         })
         .collect();
     triple_hits.sort();
@@ -638,10 +637,7 @@ mod tests {
         // capto-ffmpeg builds with `--extra-version=capto`; the token must parse
         // without strict-equality assumptions so `n9.0-capto` survives.
         let branded = "ffmpeg version n9.0-capto Copyright (c) 2000-2026 the FFmpeg developers";
-        assert_eq!(
-            parse_ffmpeg_version_line(branded).as_deref(),
-            Some(branded)
-        );
+        assert_eq!(parse_ffmpeg_version_line(branded).as_deref(), Some(branded));
         assert_eq!(
             parse_ffmpeg_version_token(branded).as_deref(),
             Some("n9.0-capto")
@@ -653,10 +649,8 @@ mod tests {
             .duration_since(std::time::UNIX_EPOCH)
             .unwrap()
             .as_nanos();
-        let dir = std::env::temp_dir().join(format!(
-            "capto-encode-test-{}-{nonce}",
-            std::process::id(),
-        ));
+        let dir =
+            std::env::temp_dir().join(format!("capto-encode-test-{}-{nonce}", std::process::id(),));
         let _ = fs::remove_dir_all(&dir);
         fs::create_dir_all(&dir).unwrap();
         dir

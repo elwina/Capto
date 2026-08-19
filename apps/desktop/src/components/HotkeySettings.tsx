@@ -1,11 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
 
-export type HotkeyAction =
-  | "startRecording"
-  | "pauseRecording"
-  | "stopRecording"
-  | "takeScreenshot";
+export type HotkeyAction = "startRecording" | "pauseRecording" | "stopRecording" | "takeScreenshot";
 
 export type HotkeyBinding = {
   action: HotkeyAction;
@@ -30,11 +26,7 @@ const ACTION_LABEL: Record<HotkeyAction, string> = {
 /** Build a Capto/Tauri shortcut string from a KeyboardEvent. */
 export function shortcutFromEvent(e: KeyboardEvent): string | null {
   if (e.key === "Escape" || e.key === "Tab") return null;
-  const isMod =
-    e.key === "Control" ||
-    e.key === "Shift" ||
-    e.key === "Alt" ||
-    e.key === "Meta";
+  const isMod = e.key === "Control" || e.key === "Shift" || e.key === "Alt" || e.key === "Meta";
   if (isMod) return null;
 
   const parts: string[] = [];
@@ -167,7 +159,9 @@ export function HotkeySettings({
           const binding = rows.find((h) => h.action === action)!;
           const active = listening === action;
           const unavailable = conflicts.some(
-            (shortcut) => shortcut.replace(/\s/g, "").toLowerCase() === binding.shortcut.replace(/\s/g, "").toLowerCase(),
+            (shortcut) =>
+              shortcut.replace(/\s/g, "").toLowerCase() ===
+              binding.shortcut.replace(/\s/g, "").toLowerCase(),
           );
           return (
             <div key={action} className="hotkey-row">

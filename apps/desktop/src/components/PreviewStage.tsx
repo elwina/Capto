@@ -25,13 +25,7 @@ function CaptoMark() {
           <circle cx="58.3" cy="52.4" r="24.1" fill="black" />
         </mask>
       </defs>
-      <circle
-        cx="50.5"
-        cy="49"
-        r="33.4"
-        fill="currentColor"
-        mask="url(#capto-mark-cut)"
-      />
+      <circle cx="50.5" cy="49" r="33.4" fill="currentColor" mask="url(#capto-mark-cut)" />
     </svg>
   );
 }
@@ -152,9 +146,7 @@ export function PreviewStage({
 
   const mask = useMemo(
     () =>
-      frame?.maskRect
-        ? maskStyle(frame.maskRect, stageSize.w, stageSize.h, frameW, frameH)
-        : null,
+      frame?.maskRect ? maskStyle(frame.maskRect, stageSize.w, stageSize.h, frameW, frameH) : null,
     [frame, stageSize, frameW, frameH],
   );
 

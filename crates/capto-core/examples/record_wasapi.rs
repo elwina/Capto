@@ -20,8 +20,8 @@ async fn main() {
     let temp = tempfile::tempdir().expect("temporary directory");
     let output = temp.path().join("wasapi-smoke.mp4");
     let settings = AppSettings::default();
-    let sidecar = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
-        .join("../../apps/desktop/src-tauri/binaries");
+    let sidecar =
+        PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../../apps/desktop/src-tauri/binaries");
     let mut session = RecordingSession::new(settings.clone(), Some(sidecar));
     session.refresh_encoder().expect("discover bundled FFmpeg");
     let mut request = RecordRequest::from_settings(&settings, output.to_string_lossy());

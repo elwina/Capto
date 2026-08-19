@@ -32,56 +32,40 @@ describe("shortcutFromEvent", () => {
   });
 
   it("builds 'Control+A' from key + code", () => {
-    expect(
-      shortcutFromEvent(kev({ key: "a", code: "KeyA", ctrlKey: true })),
-    ).toBe("Control+A");
+    expect(shortcutFromEvent(kev({ key: "a", code: "KeyA", ctrlKey: true }))).toBe("Control+A");
   });
 
   it("orders modifiers deterministically: Control, Alt, Shift, Super", () => {
-    expect(
-      shortcutFromEvent(
-        kev({ key: "g", code: "KeyG", ctrlKey: true, shiftKey: true }),
-      ),
-    ).toBe("Control+Shift+G");
-    expect(
-      shortcutFromEvent(
-        kev({ key: "s", code: "KeyS", metaKey: true, ctrlKey: true }),
-      ),
-    ).toBe("Control+Super+S");
+    expect(shortcutFromEvent(kev({ key: "g", code: "KeyG", ctrlKey: true, shiftKey: true }))).toBe(
+      "Control+Shift+G",
+    );
+    expect(shortcutFromEvent(kev({ key: "s", code: "KeyS", metaKey: true, ctrlKey: true }))).toBe(
+      "Control+Super+S",
+    );
   });
 
   it("resolves function keys from the KeyboardEvent key/code", () => {
-    expect(
-      shortcutFromEvent(kev({ key: "F5", code: "F5", ctrlKey: true })),
-    ).toBe("Control+F5");
+    expect(shortcutFromEvent(kev({ key: "F5", code: "F5", ctrlKey: true }))).toBe("Control+F5");
     // Lowercase key (some layouts / sticky situations) still matches.
-    expect(
-      shortcutFromEvent(kev({ key: "f3", code: "F3", altKey: true })),
-    ).toBe("Alt+F3");
+    expect(shortcutFromEvent(kev({ key: "f3", code: "F3", altKey: true }))).toBe("Alt+F3");
   });
 
   it("resolves digit keys via the Digit code", () => {
-    expect(
-      shortcutFromEvent(kev({ key: "1", code: "Digit1", ctrlKey: true })),
-    ).toBe("Control+1");
+    expect(shortcutFromEvent(kev({ key: "1", code: "Digit1", ctrlKey: true }))).toBe("Control+1");
   });
 
   it("blocks bare Alt+F4 (would close the focused window)", () => {
-    expect(
-      shortcutFromEvent(kev({ key: "F4", code: "F4", altKey: true })),
-    ).toBeNull();
+    expect(shortcutFromEvent(kev({ key: "F4", code: "F4", altKey: true }))).toBeNull();
   });
 
   it("allows Alt+F4 when another modifier is held", () => {
-    expect(
-      shortcutFromEvent(kev({ key: "F4", code: "F4", altKey: true, ctrlKey: true })),
-    ).toBe("Control+Alt+F4");
+    expect(shortcutFromEvent(kev({ key: "F4", code: "F4", altKey: true, ctrlKey: true }))).toBe(
+      "Control+Alt+F4",
+    );
   });
 
   it("returns null for keys that resolve to nothing (e.g. Enter)", () => {
-    expect(
-      shortcutFromEvent(kev({ key: "Enter", code: "Enter", ctrlKey: true })),
-    ).toBeNull();
+    expect(shortcutFromEvent(kev({ key: "Enter", code: "Enter", ctrlKey: true }))).toBeNull();
   });
 });
 

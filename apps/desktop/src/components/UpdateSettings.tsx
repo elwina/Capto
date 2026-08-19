@@ -83,19 +83,12 @@ export function UpdateSettings() {
   })();
 
   const busy =
-    phase.kind === "checking" ||
-    phase.kind === "downloading" ||
-    phase.kind === "installing";
+    phase.kind === "checking" || phase.kind === "downloading" || phase.kind === "installing";
 
   return (
     <div className="update-settings">
       <div className="update-settings-row">
-        <button
-          type="button"
-          className="ghost-btn"
-          disabled={busy}
-          onClick={() => void onCheck()}
-        >
+        <button type="button" className="ghost-btn" disabled={busy} onClick={() => void onCheck()}>
           {t("checkForUpdates")}
         </button>
         {phase.kind === "available" && (

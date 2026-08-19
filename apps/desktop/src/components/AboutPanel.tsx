@@ -157,9 +157,7 @@ export function AboutPanel() {
               <div>
                 <dt>{t("aboutFfmpegVersion")}</dt>
                 <dd title={ffmpeg.ffmpegVersionLine ?? undefined}>
-                  {ffmpeg.available
-                    ? (ffmpeg.ffmpegVersion ?? "—")
-                    : t("aboutFfmpegMissingShort")}
+                  {ffmpeg.available ? (ffmpeg.ffmpegVersion ?? "—") : t("aboutFfmpegMissingShort")}
                 </dd>
               </div>
               <div>

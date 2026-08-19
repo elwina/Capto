@@ -205,23 +205,20 @@ fn open_record_overlay(app: &AppHandle, bounds: OverlayBounds) -> Result<(), Str
     }
 
     // Windows: shadow must be off or transparency becomes an opaque white surface.
-    let window = WebviewWindowBuilder::new(
-        app,
-        "record-overlay",
-        WebviewUrl::App("index.html".into()),
-    )
-    .title("Capto Overlay")
-    .transparent(true)
-    .decorations(false)
-    .shadow(false)
-    .always_on_top(true)
-    .skip_taskbar(true)
-    .resizable(false)
-    .visible(true)
-    .focused(false)
-    .background_color(tauri::window::Color(0, 0, 0, 0))
-    .build()
-    .map_err(|e| format!("create record-overlay window: {e}"))?;
+    let window =
+        WebviewWindowBuilder::new(app, "record-overlay", WebviewUrl::App("index.html".into()))
+            .title("Capto Overlay")
+            .transparent(true)
+            .decorations(false)
+            .shadow(false)
+            .always_on_top(true)
+            .skip_taskbar(true)
+            .resizable(false)
+            .visible(true)
+            .focused(false)
+            .background_color(tauri::window::Color(0, 0, 0, 0))
+            .build()
+            .map_err(|e| format!("create record-overlay window: {e}"))?;
 
     let _ = window.set_position(tauri::Position::Physical(PhysicalPosition::new(
         bounds.x, bounds.y,
@@ -249,12 +246,9 @@ fn pump_events(
 ) {
     while let Ok(ev) = rx.recv() {
         match ev {
-            InputEvent::MouseButton {
-                button,
-                x,
-                y,
-                down,
-            } if down && config.mouse_clicks.enabled && bounds.contains(x, y) => {
+            InputEvent::MouseButton { button, x, y, down }
+                if down && config.mouse_clicks.enabled && bounds.contains(x, y) =>
+            {
                 let (name, color) = match button {
                     MouseButton::Left => ("left", config.mouse_clicks.left_color.clone()),
                     MouseButton::Right => ("right", config.mouse_clicks.right_color.clone()),

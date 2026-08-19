@@ -1,7 +1,5 @@
 use anyhow::{bail, Context, Result};
-use capto_ipc::{
-    clear_server_lock, is_pid_alive, read_server_lock, Envelope, ServerLock,
-};
+use capto_ipc::{clear_server_lock, is_pid_alive, read_server_lock, Envelope, ServerLock};
 use serde::de::DeserializeOwned;
 use serde_json::Value;
 use std::time::Duration;
@@ -26,13 +24,20 @@ impl ControlClient {
             return Ok(client);
         }
         if !auto_launch {
-            bail!("Capto desktop control plane is not running (use without --no-launch to start it)");
+            bail!(
+                "Capto desktop control plane is not running (use without --no-launch to start it)"
+            );
         }
         let exe = launch::spawn_capto().context("failed to launch Capto desktop")?;
         wait_for_ready(Duration::from_secs(45), &exe).await
     }
 
-    async fn request(&self, method: reqwest::Method, path: &str, body: Option<Value>) -> Result<Value, HttpError> {
+    async fn request(
+        &self,
+        method: reqwest::Method,
+        path: &str,
+        body: Option<Value>,
+    ) -> Result<Value, HttpError> {
         let url = format!("{}{path}", self.base);
         let mut req = self
             .http
@@ -54,14 +59,16 @@ impl ControlClient {
         if envelope.ok {
             Ok(envelope.data.unwrap_or(Value::Null))
         } else {
-            let err = envelope.error.unwrap_or_else(|| capto_ipc::ApiError::new(
-                if status.as_u16() == 409 {
-                    "stateConflict"
-                } else {
-                    "error"
-                },
-                format!("HTTP {status}"),
-            ));
+            let err = envelope.error.unwrap_or_else(|| {
+                capto_ipc::ApiError::new(
+                    if status.as_u16() == 409 {
+                        "stateConflict"
+                    } else {
+                        "error"
+                    },
+                    format!("HTTP {status}"),
+                )
+            });
             Err(HttpError {
                 code: err.code,
                 message: err.message,
@@ -73,7 +80,11 @@ impl ControlClient {
         self.request(reqwest::Method::GET, path, None).await
     }
 
-    pub async fn post_json<T: serde::Serialize>(&self, path: &str, body: &T) -> Result<Value, HttpError> {
+    pub async fn post_json<T: serde::Serialize>(
+        &self,
+        path: &str,
+        body: &T,
+    ) -> Result<Value, HttpError> {
         let v = serde_json::to_value(body).map_err(|e| HttpError {
             code: "usage".into(),
             message: e.to_string(),
@@ -82,7 +93,8 @@ impl ControlClient {
     }
 
     pub async fn post_empty(&self, path: &str) -> Result<Value, HttpError> {
-        self.request(reqwest::Method::POST, path, Some(json_null_obj())).await
+        self.request(reqwest::Method::POST, path, Some(json_null_obj()))
+            .await
     }
 
     pub async fn patch_json(&self, path: &str, body: &Value) -> Result<Value, HttpError> {
@@ -122,7 +134,10 @@ fn from_lock(lock: ServerLock) -> ControlClient {
     }
 }
 
-async fn wait_for_ready(timeout: Duration, launched_exe: &std::path::Path) -> Result<ControlClient> {
+async fn wait_for_ready(
+    timeout: Duration,
+    launched_exe: &std::path::Path,
+) -> Result<ControlClient> {
     let start = std::time::Instant::now();
     loop {
         if let Some(client) = try_existing().await? {

@@ -69,9 +69,7 @@ export function usePreviewFrame({
         });
         if (cancelled) return;
         const bytes = next.jpeg ?? [];
-        const url = URL.createObjectURL(
-          new Blob([Uint8Array.from(bytes)], { type: "image/jpeg" }),
-        );
+        const url = URL.createObjectURL(new Blob([Uint8Array.from(bytes)], { type: "image/jpeg" }));
         if (urlRef.current) URL.revokeObjectURL(urlRef.current);
         urlRef.current = url;
         setImageUrl(url);

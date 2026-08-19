@@ -53,8 +53,8 @@ export function WebcamPanel({
 
   function pickCamera(deviceId: string) {
     const label = deviceId
-      ? devices.find((d) => d.deviceId === deviceId)?.label ?? null
-      : devices[0]?.label ?? null;
+      ? (devices.find((d) => d.deviceId === deviceId)?.label ?? null)
+      : (devices[0]?.label ?? null);
     patch({
       deviceId: deviceId || null,
       deviceLabel: label,
@@ -125,9 +125,7 @@ export function WebcamPanel({
               <img src={solo.imageUrl} alt={t("webcamPreview")} draggable={false} />
             ) : (
               <span>
-                {camOn
-                  ? (webcamErrorText(solo.error) ?? t("webcamStarting"))
-                  : t("webcamOff")}
+                {camOn ? (webcamErrorText(solo.error) ?? t("webcamStarting")) : t("webcamOff")}
               </span>
             )}
           </div>

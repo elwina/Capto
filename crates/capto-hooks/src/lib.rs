@@ -151,12 +151,12 @@ mod windows_impl {
         SetThreadDpiAwarenessContext, DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
     };
     use windows::Win32::UI::Input::KeyboardAndMouse::{
-        GetAsyncKeyState, GetKeyNameTextW, MapVirtualKeyW, MAPVK_VK_TO_VSC, VIRTUAL_KEY, VK_CONTROL,
-        VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
+        GetAsyncKeyState, GetKeyNameTextW, MapVirtualKeyW, MAPVK_VK_TO_VSC, VIRTUAL_KEY,
+        VK_CONTROL, VK_LWIN, VK_MENU, VK_RWIN, VK_SHIFT,
     };
     use windows::Win32::UI::WindowsAndMessaging::{
         CallNextHookEx, DispatchMessageW, GetMessageW, SetWindowsHookExW, TranslateMessage,
-        UnhookWindowsHookEx, HHOOK, KBDLLHOOKSTRUCT, MSLLHOOKSTRUCT, MSG, WH_KEYBOARD_LL,
+        UnhookWindowsHookEx, HHOOK, KBDLLHOOKSTRUCT, MSG, MSLLHOOKSTRUCT, WH_KEYBOARD_LL,
         WH_MOUSE_LL, WM_KEYDOWN, WM_KEYUP, WM_LBUTTONDOWN, WM_MBUTTONDOWN, WM_QUIT, WM_RBUTTONDOWN,
         WM_SYSKEYDOWN, WM_SYSKEYUP,
     };
@@ -186,44 +186,41 @@ mod windows_impl {
             let thread_id = Arc::clone(&self.thread_id);
             let handle = thread::Builder::new()
                 .name("capto-input-hooks".into())
-                .spawn(move || {
-                    unsafe {
-                        let _ = SetThreadDpiAwarenessContext(
-                            DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2,
-                        );
-                        if let Ok(mut id) = thread_id.lock() {
-                            *id = Some(windows::Win32::System::Threading::GetCurrentThreadId());
-                        }
-
-                        match SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_proc), None, 0) {
-                            Ok(h) => {
-                                if let Ok(mut g) = MOUSE_HOOK.lock() {
-                                    *g = Some(h.0 as isize);
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("capto-hooks: WH_MOUSE_LL failed: {e}");
-                            }
-                        }
-                        match SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0) {
-                            Ok(h) => {
-                                if let Ok(mut g) = KEY_HOOK.lock() {
-                                    *g = Some(h.0 as isize);
-                                }
-                            }
-                            Err(e) => {
-                                eprintln!("capto-hooks: WH_KEYBOARD_LL failed: {e}");
-                            }
-                        }
-
-                        let mut msg = MSG::default();
-                        while GetMessageW(&mut msg, None, 0, 0).into() {
-                            let _ = TranslateMessage(&msg);
-                            DispatchMessageW(&msg);
-                        }
-
-                        unhook_all();
+                .spawn(move || unsafe {
+                    let _ =
+                        SetThreadDpiAwarenessContext(DPI_AWARENESS_CONTEXT_PER_MONITOR_AWARE_V2);
+                    if let Ok(mut id) = thread_id.lock() {
+                        *id = Some(windows::Win32::System::Threading::GetCurrentThreadId());
                     }
+
+                    match SetWindowsHookExW(WH_MOUSE_LL, Some(mouse_proc), None, 0) {
+                        Ok(h) => {
+                            if let Ok(mut g) = MOUSE_HOOK.lock() {
+                                *g = Some(h.0 as isize);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("capto-hooks: WH_MOUSE_LL failed: {e}");
+                        }
+                    }
+                    match SetWindowsHookExW(WH_KEYBOARD_LL, Some(keyboard_proc), None, 0) {
+                        Ok(h) => {
+                            if let Ok(mut g) = KEY_HOOK.lock() {
+                                *g = Some(h.0 as isize);
+                            }
+                        }
+                        Err(e) => {
+                            eprintln!("capto-hooks: WH_KEYBOARD_LL failed: {e}");
+                        }
+                    }
+
+                    let mut msg = MSG::default();
+                    while GetMessageW(&mut msg, None, 0, 0).into() {
+                        let _ = TranslateMessage(&msg);
+                        DispatchMessageW(&msg);
+                    }
+
+                    unhook_all();
                 })
                 .map_err(|e| e.to_string())?;
             self.thread = Some(handle);
@@ -310,10 +307,7 @@ mod windows_impl {
                         .unwrap_or(true);
                     if first_down {
                         if let Some(label) = format_key_label(vk) {
-                            emit(InputEvent::Key {
-                                label,
-                                down: true,
-                            });
+                            emit(InputEvent::Key { label, down: true });
                         }
                     }
                 } else if up {

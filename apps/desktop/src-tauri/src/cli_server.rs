@@ -22,13 +22,17 @@ struct HttpState {
     app: AppHandle,
     token: String,
     port: u16,
-    register_hotkeys: Arc<dyn Fn(&AppHandle, &capto_core::AppSettings) -> Vec<String> + Send + Sync>,
+    register_hotkeys:
+        Arc<dyn Fn(&AppHandle, &capto_core::AppSettings) -> Vec<String> + Send + Sync>,
 }
 
 fn unauthorized() -> impl IntoResponse {
     (
         StatusCode::UNAUTHORIZED,
-        Json(Envelope::<()>::err("unauthorized", "invalid or missing bearer token")),
+        Json(Envelope::<()>::err(
+            "unauthorized",
+            "invalid or missing bearer token",
+        )),
     )
 }
 
@@ -80,10 +84,7 @@ async fn doctor_handler(
     Json(Envelope::ok(info)).into_response()
 }
 
-async fn config_get(
-    AxumState(st): AxumState<HttpState>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
+async fn config_get(AxumState(st): AxumState<HttpState>, headers: HeaderMap) -> impl IntoResponse {
     if !check_auth(&headers, &st.token) {
         return unauthorized().into_response();
     }
@@ -91,10 +92,7 @@ async fn config_get(
     Json(Envelope::ok(settings)).into_response()
 }
 
-async fn config_path(
-    AxumState(st): AxumState<HttpState>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
+async fn config_path(AxumState(st): AxumState<HttpState>, headers: HeaderMap) -> impl IntoResponse {
     if !check_auth(&headers, &st.token) {
         return unauthorized().into_response();
     }
@@ -143,10 +141,7 @@ async fn record_start(
     }
 }
 
-async fn record_stop(
-    AxumState(st): AxumState<HttpState>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
+async fn record_stop(AxumState(st): AxumState<HttpState>, headers: HeaderMap) -> impl IntoResponse {
     if !check_auth(&headers, &st.token) {
         return unauthorized().into_response();
     }
@@ -227,10 +222,7 @@ async fn list_windows(
     }
 }
 
-async fn list_audio(
-    AxumState(st): AxumState<HttpState>,
-    headers: HeaderMap,
-) -> impl IntoResponse {
+async fn list_audio(AxumState(st): AxumState<HttpState>, headers: HeaderMap) -> impl IntoResponse {
     if !check_auth(&headers, &st.token) {
         return unauthorized().into_response();
     }
@@ -305,7 +297,9 @@ fn build_router(state: HttpState) -> Router {
 /// Bind `127.0.0.1:0`, write lock file, spawn axum server. Returns bound port.
 pub fn start_control_plane(
     app: AppHandle,
-    register_hotkeys: Arc<dyn Fn(&AppHandle, &capto_core::AppSettings) -> Vec<String> + Send + Sync>,
+    register_hotkeys: Arc<
+        dyn Fn(&AppHandle, &capto_core::AppSettings) -> Vec<String> + Send + Sync,
+    >,
 ) -> Result<u16, String> {
     let listener = std::net::TcpListener::bind("127.0.0.1:0").map_err(|e| e.to_string())?;
     listener.set_nonblocking(true).map_err(|e| e.to_string())?;

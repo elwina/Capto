@@ -307,8 +307,8 @@ fn add_audio_mapping_simple(
         _ => {
             let labeled = inputs
                 .iter()
-        .map(|(index, kind)| {
-            let gain = audio_gain(*kind, req);
+                .map(|(index, kind)| {
+                    let gain = audio_gain(*kind, req);
                     format!("[{index}:a]volume={gain}[a{index}]")
                 })
                 .collect::<Vec<_>>()

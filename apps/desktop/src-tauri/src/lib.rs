@@ -135,9 +135,7 @@ async fn get_session_state(state: State<'_, AppState>) -> Result<SessionSnapshot
 }
 
 #[tauri::command]
-async fn get_audio_levels(
-    state: State<'_, AppState>,
-) -> Result<capto_audio::AudioLevels, String> {
+async fn get_audio_levels(state: State<'_, AppState>) -> Result<capto_audio::AudioLevels, String> {
     let session = state.session.lock().await;
     let levels = session.audio_levels();
     drop(session);
@@ -162,8 +160,9 @@ async fn start_audio_meter(
     if state.session.lock().await.snapshot().await.state != SessionState::Idle {
         return Err("audio test is unavailable while recording".into());
     }
-    let meter = capto_audio::AudioMeterSession::start(mic_device.as_deref(), loopback_device.as_deref())
-        .map_err(|e| e.to_string())?;
+    let meter =
+        capto_audio::AudioMeterSession::start(mic_device.as_deref(), loopback_device.as_deref())
+            .map_err(|e| e.to_string())?;
     *state.audio_meter.lock().await = meter;
     Ok(())
 }
@@ -707,16 +706,12 @@ async fn get_ffmpeg_info(app: AppHandle, state: State<'_, AppState>) -> Result<F
         session.encoder().cloned()
     };
     let pinned = pinned_capto_ffmpeg_meta();
-    let resource_meta = app
-        .path()
-        .resource_dir()
-        .ok()
-        .and_then(|dir| {
-            let path = dir.join("capto-ffmpeg.json");
-            std::fs::read_to_string(path)
-                .ok()
-                .and_then(|t| serde_json::from_str::<CaptoFfmpegMeta>(&t).ok())
-        });
+    let resource_meta = app.path().resource_dir().ok().and_then(|dir| {
+        let path = dir.join("capto-ffmpeg.json");
+        std::fs::read_to_string(path)
+            .ok()
+            .and_then(|t| serde_json::from_str::<CaptoFfmpegMeta>(&t).ok())
+    });
 
     let Some(encoder) = encoder else {
         let meta = resource_meta.unwrap_or(pinned);
@@ -789,9 +784,7 @@ async fn open_output_folder(state: State<'_, AppState>) -> Result<String, String
 async fn get_platform_info(state: State<'_, AppState>) -> Result<PlatformInfo, String> {
     let mut session = state.session.lock().await;
     let _ = session.refresh_encoder();
-    let ffmpeg_path = session
-        .encoder()
-        .map(|e| display_path(e.binary_path()));
+    let ffmpeg_path = session.encoder().map(|e| display_path(e.binary_path()));
     Ok(PlatformInfo {
         capture_backend: session.capture().platform_name().into(),
         os: std::env::consts::OS.into(),
@@ -1117,8 +1110,7 @@ pub fn run() {
                 hotkey_conflicts: std::sync::Mutex::new(Vec::new()),
             });
 
-            let [show_l, start_l, pause_l, stop_l, shot_l, quit_l] =
-                tray_labels(&settings.locale);
+            let [show_l, start_l, pause_l, stop_l, shot_l, quit_l] = tray_labels(&settings.locale);
             let show_i = MenuItem::with_id(app, "show", show_l, true, None::<&str>)?;
             let start_i = MenuItem::with_id(app, "start", start_l, true, None::<&str>)?;
             let pause_i = MenuItem::with_id(app, "pause", pause_l, true, None::<&str>)?;
@@ -1191,15 +1183,13 @@ pub fn run() {
             if !conflicts.is_empty() {
                 tracing::warn!(?conflicts, "some hotkeys could not be registered");
             }
-            *app
-                .state::<AppState>()
+            *app.state::<AppState>()
                 .hotkey_conflicts
                 .lock()
                 .expect("hotkey conflict state poisoned") = conflicts;
 
-            let register: Arc<
-                dyn Fn(&AppHandle, &AppSettings) -> Vec<String> + Send + Sync,
-            > = Arc::new(|app, settings| register_hotkeys(app, settings));
+            let register: Arc<dyn Fn(&AppHandle, &AppSettings) -> Vec<String> + Send + Sync> =
+                Arc::new(|app, settings| register_hotkeys(app, settings));
             if let Err(e) = cli_server::start_control_plane(app.handle().clone(), register) {
                 tracing::error!(%e, "failed to start CLI control plane");
             }

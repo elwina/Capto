@@ -232,13 +232,19 @@ pub async fn take_screenshot(state: &AppState, args: ShotRequest) -> Result<Stri
 
 pub async fn list_displays(state: &AppState) -> Result<Value, String> {
     let session = state.session.lock().await;
-    let list = session.capture().list_displays().map_err(|e| e.to_string())?;
+    let list = session
+        .capture()
+        .list_displays()
+        .map_err(|e| e.to_string())?;
     serde_json::to_value(list).map_err(|e| e.to_string())
 }
 
 pub async fn list_windows(state: &AppState) -> Result<Value, String> {
     let session = state.session.lock().await;
-    let list = session.capture().list_windows().map_err(|e| e.to_string())?;
+    let list = session
+        .capture()
+        .list_windows()
+        .map_err(|e| e.to_string())?;
     serde_json::to_value(list).map_err(|e| e.to_string())
 }
 

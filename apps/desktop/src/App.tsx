@@ -128,8 +128,7 @@ function Icon({ path, size = 18 }: { path: IconPath; size?: number }) {
 }
 
 const I: Record<string, IconPath> = {
-  record:
-    "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 5.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z",
+  record: "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20Zm0 5.5a4.5 4.5 0 1 1 0 9 4.5 4.5 0 0 1 0-9Z",
   stop: "M7 7h10v10H7V7Z",
   pause: "M8 6h3v12H8V6Zm5 0h3v12h-3V6Z",
   play: "M8 5v14l11-7L8 5Z",
@@ -147,32 +146,20 @@ const I: Record<string, IconPath> = {
     stroke: true,
     d: "M4 6h16v12H4V6ZM7 10h.01M10 10h.01M13 10h.01M16 10h.01M7 14h6M16 14h1",
   },
-  clock:
-    "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 10.6 3.2 1.9-.9 1.5L11 13.5V7h2v5.6Z",
-  refresh:
-    "M12 6V3L8 7l4 4V8a4 4 0 1 1-4 4H6a6 6 0 1 0 6-6Z",
-  folder:
-    "M3 6h6l2 2h10v10H3V6Zm2 4v8h14v-6H10l-2-2H5Z",
+  clock: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 10.6 3.2 1.9-.9 1.5L11 13.5V7h2v5.6Z",
+  refresh: "M12 6V3L8 7l4 4V8a4 4 0 1 1-4 4H6a6 6 0 1 0 6-6Z",
+  folder: "M3 6h6l2 2h10v10H3V6Zm2 4v8h14v-6H10l-2-2H5Z",
   preview:
     "M12 5C7 5 2.7 8.1 1 12c1.7 3.9 6 7 11 7s9.3-3.1 11-7c-1.7-3.9-6-7-11-7Zm0 11a4 4 0 1 1 4-4 4 4 0 0 1-4 4Z",
-  home:
-    "M12 3 3 10h2v9h5v-5h4v5h5v-9h2L12 3Z",
-  layers:
-    "m12 3 9 5-9 5-9-5 9-5Zm0 8.5 9 5-9 5-9-5 9-5Z",
-  gear:
-    "M19.1 12.9a7.5 7.5 0 0 0 .1-1.8l2-1.5-2-3.4-2.4 1a7.6 7.6 0 0 0-1.6-.9L14.8 3h-4l-.4 2.3a7.6 7.6 0 0 0-1.6.9l-2.4-1-2 3.4 2 1.5a7.5 7.5 0 0 0-.1 1.8l-2 1.5 2 3.4 2.4-1c.5.4 1 .7 1.6.9L10.8 21h4l.4-2.3c.6-.2 1.1-.5 1.6-.9l2.4 1 2-3.4-2-1.5ZM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Z",
-  screen:
-    "M3 5h18v12H3V5Zm2 2v8h14V7H5Zm4 12h6v2H9v-2Z",
-  window:
-    "M4 5h16v14H4V5Zm2 2v2h12V7H6Zm0 4v6h12v-6H6Z",
-  region:
-    "M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z",
-  mic:
-    "M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Zm-7 9h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11Z",
-  cam:
-    "M4 7h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Zm13 2.5 5-3v11l-5-3v-5Z",
-  info:
-    "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-6h2Zm0-8h-2V7h2Z",
+  home: "M12 3 3 10h2v9h5v-5h4v5h5v-9h2L12 3Z",
+  layers: "m12 3 9 5-9 5-9-5 9-5Zm0 8.5 9 5-9 5-9-5 9-5Z",
+  gear: "M19.1 12.9a7.5 7.5 0 0 0 .1-1.8l2-1.5-2-3.4-2.4 1a7.6 7.6 0 0 0-1.6-.9L14.8 3h-4l-.4 2.3a7.6 7.6 0 0 0-1.6.9l-2.4-1-2 3.4 2 1.5a7.5 7.5 0 0 0-.1 1.8l-2 1.5 2 3.4 2.4-1c.5.4 1 .7 1.6.9L10.8 21h4l.4-2.3c.6-.2 1.1-.5 1.6-.9l2.4 1 2-3.4-2-1.5ZM12 15.5A3.5 3.5 0 1 1 15.5 12 3.5 3.5 0 0 1 12 15.5Z",
+  screen: "M3 5h18v12H3V5Zm2 2v8h14V7H5Zm4 12h6v2H9v-2Z",
+  window: "M4 5h16v14H4V5Zm2 2v2h12V7H6Zm0 4v6h12v-6H6Z",
+  region: "M4 4h6v2H6v4H4V4Zm10 0h6v6h-2V6h-4V4ZM4 14h2v4h4v2H4v-6Zm14 0h2v6h-6v-2h4v-4Z",
+  mic: "M12 2a3 3 0 0 0-3 3v6a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Zm-7 9h2a5 5 0 0 0 10 0h2a7 7 0 0 1-6 6.9V21h-2v-3.1A7 7 0 0 1 5 11Z",
+  cam: "M4 7h11a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V9a2 2 0 0 1 2-2Zm13 2.5 5-3v11l-5-3v-5Z",
+  info: "M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2Zm1 15h-2v-6h2Zm0-8h-2V7h2Z",
 };
 
 function isWindowPickerLabel(l: string) {
@@ -198,10 +185,7 @@ export default function App() {
           "picker-mode",
           isWindowPickerLabel(l) || isRegionPickerLabel(l),
         );
-        document.documentElement.classList.toggle(
-          "record-overlay-mode",
-          l === "record-overlay",
-        );
+        document.documentElement.classList.toggle("record-overlay-mode", l === "record-overlay");
       } catch {
         try {
           const l = await invoke<string>("get_window_label");
@@ -243,7 +227,12 @@ function MainApp() {
   const [source, setSource] = useState<VideoSource>("display");
   const [displayId, setDisplayId] = useState(0);
   const [pickedWindow, setPickedWindow] = useState<WindowInfo | null>(null);
-  const [region, setRegion] = useState<{ x: number; y: number; width: number; height: number } | null>(null);
+  const [region, setRegion] = useState<{
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+  } | null>(null);
   const [mic, setMic] = useState("");
   const [loopback, setLoopback] = useState("");
   const [micVolume, setMicVolume] = useState(100);
@@ -305,13 +294,11 @@ function MainApp() {
       setSession(st);
       setHotkeyConflicts(conflicts);
 
-      const displayOk =
-        s.defaultDisplayId != null && d.some((x) => x.id === s.defaultDisplayId);
+      const displayOk = s.defaultDisplayId != null && d.some((x) => x.id === s.defaultDisplayId);
       setDisplayId(displayOk ? s.defaultDisplayId! : (d[0]?.id ?? 0));
       setRegion(s.defaultRegion ?? null);
 
-      const knownAudio = (id: string | null | undefined) =>
-        !!id && a.some((dev) => dev.id === id);
+      const knownAudio = (id: string | null | undefined) => !!id && a.some((dev) => dev.id === id);
       setMic(knownAudio(s.micDevice) ? s.micDevice! : "");
       setLoopback(knownAudio(s.loopbackDevice) ? s.loopbackDevice! : "");
       setMicVolume(s.micVolume ?? 100);
@@ -412,7 +399,9 @@ function MainApp() {
       }
     });
     const timer = window.setInterval(() => {
-      void invoke<SessionSnapshot>("get_session_state").then(setSession).catch(() => undefined);
+      void invoke<SessionSnapshot>("get_session_state")
+        .then(setSession)
+        .catch(() => undefined);
     }, 500);
     return () => {
       void unSession.then((f) => f());
@@ -435,10 +424,7 @@ function MainApp() {
       .find(Boolean);
   }, [availableEncoders]);
   const recording = session?.state === "recording" || session?.state === "paused";
-  const sessionBusy =
-    recording ||
-    session?.state === "starting" ||
-    session?.state === "stopping";
+  const sessionBusy = recording || session?.state === "starting" || session?.state === "stopping";
   const recordTransitionBusy = startingRecord || stoppingRecord;
 
   useEffect(() => {
@@ -472,8 +458,7 @@ function MainApp() {
 
   // Preview switch only controls the stage; recording pauses the feed separately.
   const showPreviewStage = showPreview && !sessionBusy && format !== "audioOnly";
-  const previewVisible =
-    showPreviewStage && (tab === "main" || tab === "webcam");
+  const previewVisible = showPreviewStage && (tab === "main" || tab === "webcam");
   const previewState = usePreviewFrame({
     enabled: previewVisible,
     source,
@@ -510,12 +495,7 @@ function MainApp() {
     setSettings(next);
     void invoke("save_settings", { settings: next });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [
-    camState.devices,
-    webcam.enabled,
-    webcam.deviceLabel,
-    webcam.deviceId,
-  ]);
+  }, [camState.devices, webcam.enabled, webcam.deviceLabel, webcam.deviceId]);
 
   // Free the MF camera when PiP is turned off (settings tab may not be mounted).
   useEffect(() => {
@@ -763,9 +743,9 @@ function MainApp() {
 
   const sourceLabel =
     source === "display"
-      ? displays.find((d) => d.id === displayId)?.name ?? t("fullScreen")
+      ? (displays.find((d) => d.id === displayId)?.name ?? t("fullScreen"))
       : source === "window"
-        ? pickedWindow?.title ?? t("pickWindow")
+        ? (pickedWindow?.title ?? t("pickWindow"))
         : region
           ? `${region.width}×${region.height}`
           : t("selectRegion");
@@ -840,7 +820,12 @@ function MainApp() {
           <Icon path={I.keys} size={16} />
         </button>
         <span className="toggle-spacer" />
-        <button type="button" className="toggle" title={t("refresh")} onClick={() => void refresh()}>
+        <button
+          type="button"
+          className="toggle"
+          title={t("refresh")}
+          onClick={() => void refresh()}
+        >
           <Icon path={I.refresh} size={16} />
         </button>
         <button
@@ -1181,7 +1166,9 @@ function MainApp() {
                       persistMainPrefs({ loopbackDevice: v || null });
                     }}
                   >
-                    <option value="">{t("systemAudio")}: {t("none")}</option>
+                    <option value="">
+                      {t("systemAudio")}: {t("none")}
+                    </option>
                     {loops.map((d) => (
                       <option key={d.id} value={d.id}>
                         {d.name}
@@ -1250,7 +1237,7 @@ function MainApp() {
                     <Icon path={I.cam} />
                   </span>
                   <select
-                    value={webcam.enabled ? webcam.deviceId ?? "default" : ""}
+                    value={webcam.enabled ? (webcam.deviceId ?? "default") : ""}
                     onChange={(e) => {
                       const v = e.target.value;
                       if (!v) {
@@ -1259,8 +1246,8 @@ function MainApp() {
                       }
                       const deviceId = v === "default" ? "" : v;
                       const label = deviceId
-                        ? camState.devices.find((d) => d.deviceId === deviceId)?.label ?? null
-                        : camState.devices[0]?.label ?? null;
+                        ? (camState.devices.find((d) => d.deviceId === deviceId)?.label ?? null)
+                        : (camState.devices[0]?.label ?? null);
                       patchWebcam({
                         ...webcam,
                         enabled: true,
@@ -1277,11 +1264,7 @@ function MainApp() {
                       </option>
                     ))}
                   </select>
-                  <button
-                    type="button"
-                    className="ghost-btn"
-                    onClick={() => setTab("webcam")}
-                  >
+                  <button type="button" className="ghost-btn" onClick={() => setTab("webcam")}>
                     {t("webcamSettings")}
                   </button>
                 </div>
@@ -1289,7 +1272,11 @@ function MainApp() {
 
               {(session?.outputPath || lastShot) && (
                 <div className="last-files mono">
-                  {session?.outputPath && <div>{t("lastFile")}: {session.outputPath}</div>}
+                  {session?.outputPath && (
+                    <div>
+                      {t("lastFile")}: {session.outputPath}
+                    </div>
+                  )}
                   {lastShot && <div>{t("lastShot", { path: lastShot })}</div>}
                 </div>
               )}
@@ -1324,7 +1311,11 @@ function MainApp() {
                     onChange={(e) => setSettings({ ...settings, outputDir: e.target.value })}
                     onBlur={() => void saveSettings(settings)}
                   />
-                  <button type="button" className="ghost-btn" onClick={() => void chooseOutputDir()}>
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => void chooseOutputDir()}
+                  >
                     {t("browse")}
                   </button>
                 </div>

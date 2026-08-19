@@ -37,8 +37,7 @@ pub fn read_server_lock() -> std::io::Result<ServerLock> {
 
 pub fn read_server_lock_at(path: &Path) -> std::io::Result<ServerLock> {
     let data = fs::read_to_string(path)?;
-    serde_json::from_str(&data)
-        .map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
+    serde_json::from_str(&data).map_err(|e| std::io::Error::new(std::io::ErrorKind::InvalidData, e))
 }
 
 pub fn clear_server_lock() {
