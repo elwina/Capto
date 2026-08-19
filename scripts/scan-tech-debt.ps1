@@ -1,7 +1,9 @@
-# Scan tracked source for tech-debt markers (TODO/FIXME/HACK/XXX).
+# Scan tracked source for tech-debt markers.
 #
-# This repo keeps a zero-debt policy: the CI job fails if any marker is added.
-# There is no exemption comment — fix the debt.
+# This repo keeps a zero-debt policy: the CI job fails if any marker is added
+# to source. There is no exemption comment — fix the debt.
+# Note: the marker keywords are intentionally never written literally in this
+# file so the scanner cannot flag itself.
 #
 # Usage:
 #   .\scripts\scan-tech-debt.ps1            # repo root
@@ -14,7 +16,9 @@ param(
 $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 
-$hits = git -C $RepoRoot grep -n -I -E "TODO|FIXME|HACK|XXX" -- `
+$mark = "T" + "O" + "D" + "O|F" + "IX" + "M" + "E|H" + "AC" + "K|X" + "XX"
+
+$hits = git -C $RepoRoot grep -n -I -E $mark -- `
     "*.rs" "*.ts" "*.tsx" "*.js" "*.jsx" "*.ps1" "*.py" 2>$null
 if ($LASTEXITCODE -eq 1) {
     # git grep exits 1 when nothing matches.
@@ -30,5 +34,5 @@ if ($hits.Count -gt 0) {
     $hits | ForEach-Object { Write-Host "  $_" }
     exit 1
 }
-Write-Host "Tech-debt scan passed: no TODO/FIXME/HACK/XXX markers in source."
+Write-Host "Tech-debt scan passed: zero debt markers in tracked source."
 exit 0
