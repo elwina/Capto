@@ -99,6 +99,7 @@ Repo-hygiene guards (run when touching many files; enforced in CI):
 ```powershell
 .\scripts\check-file-size.ps1   # no oversized source files
 .\scripts\scan-tech-debt.ps1    # no TODO/FIXME/HACK/XXX in source
+.\scripts\check-version-drift.ps1  # package.json vs tauri.conf.json version in lockstep
 ```
 
 Installer embeds CLI at `<install>\cli\capto.exe` and adds that folder to user **PATH** (NSIS hook). Not a separate Release asset. See `apps/desktop/src-tauri/binaries/README.md` and `windows/hooks.nsh`.

@@ -120,6 +120,7 @@ Repo-hygiene checks (also enforced in CI):
 ```powershell
 .\scripts\check-file-size.ps1   # fails on oversized source files
 .\scripts\scan-tech-debt.ps1    # fails on TODO/FIXME/HACK/XXX in source
+.\scripts\check-version-drift.ps1  # package.json and tauri.conf.json in lockstep
 ```
 ## Author
 

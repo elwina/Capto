@@ -120,6 +120,11 @@ jobs:
         run: |
           .\scripts\validate-agents-md.ps1
 
+      - name: version_drift_detection (npm vs tauri.conf)
+        shell: pwsh
+        run: |
+          .\scripts\check-version-drift.ps1
+
       - name: Upload hygiene reports
         uses: actions/upload-artifact@v4
         with:
