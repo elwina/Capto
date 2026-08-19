@@ -10,7 +10,14 @@ concurrency:
 
 jobs:
   droid-review:
-    if: github.event.pull_request.draft == false
+    # Skip draft PRs, bot-authored PRs (Dependabot / wiki / automation),
+    # wiki auto-generated docs PRs, and PRs opting out via [skip-review]
+    # in the title — these are not code changes worth AI review quota.
+    if: |
+      github.event.pull_request.draft == false &&
+      !startsWith(github.event.pull_request.head.ref, 'wiki-') &&
+      !contains(github.event.pull_request.user.login, '[bot]') &&
+      !contains(github.event.pull_request.title, '[skip-review]')
     runs-on: ubuntu-latest
     permissions:
       contents: write
