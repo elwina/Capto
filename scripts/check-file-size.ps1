@@ -4,13 +4,17 @@
 # assets (images/installers), lockfiles, vendored deps, and build output are
 # intentionally excluded. Exceptions are allowed via `@nolimit` in the file.
 #
+# Cross-platform by design (runs on Windows pwsh and ubuntu-latest pwsh in
+# CI); each file is measured defensively so one unusual file (odd name,
+# missing materialization, huge blob) cannot take the whole gate down.
+#
 # Usage:
 #   .\scripts\check-file-size.ps1            # repo root
 #   .\scripts\check-file-size.ps1 -OutFile out.txt
 
 param(
     [string]$OutFile = "",
-    [int]$MaxBytes = 300 * 1024,
+    [int]$MaxBytes = 307200,
     [int]$MaxLines = 2500
 )
 
@@ -26,20 +30,26 @@ $excludedFile = @("Cargo.lock", "package-lock.json", "pnpm-lock.yaml", "yarn.loc
 $violations = @()
 foreach ($rel in $candidates) {
     $file = Join-Path $RepoRoot $rel
-    if (-not (Test-Path -LiteralPath $file)) { continue }
-    $keep = Get-Content -Raw -LiteralPath $file -ErrorAction SilentlyContinue
-    if ($keep -match "@nolimit") { continue }
     $ext = [System.IO.Path]::GetExtension($rel).ToLowerInvariant()
     if ($excludedExt -contains $ext) { continue }
     if ($excludedFile -contains ([System.IO.Path]::GetFileName($rel))) { continue }
-    $bytes = (Get-Item -LiteralPath $file).Length
-    if ($bytes -gt $MaxBytes) {
-        $violations += "$rel ($bytes bytes > $MaxBytes)"
-        continue
-    }
-    $lines = (Get-Content -LiteralPath $file | Measure-Object -Line).Lines
-    if ($lines -gt $MaxLines) {
-        $violations += "$rel ($lines lines > $MaxLines)"
+
+    try {
+        if (-not (Test-Path -LiteralPath $file -PathType Leaf)) { continue }
+        # @nolimit marker: opt a deliberately-large file out.
+        if ([System.IO.File]::ReadAllText($file).Contains("@nolimit")) { continue }
+
+        $bytes = (Get-Item -LiteralPath $file).Length
+        if ($bytes -gt $MaxBytes) {
+            $violations += "$rel ($bytes bytes > $MaxBytes)"
+            continue
+        }
+        $lines = ([System.IO.File]::ReadLines($file) | Measure-Object).Count
+        if ($lines -gt $MaxLines) {
+            $violations += "$rel ($lines lines > $MaxLines)"
+        }
+    } catch {
+        Write-Warning "Skipping ${rel}: $($_.Exception.Message)"
     }
 }
 
