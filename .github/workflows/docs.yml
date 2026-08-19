@@ -22,11 +22,24 @@ jobs:
   build:
     name: Build rustdoc
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - name: Install system deps (native libraries for lib crates)
-        run: sudo apt-get update && sudo apt-get install -y libasound2-dev libudev-dev libdbus-1-dev libx11-dev libxi-dev libxtst-dev pkg-config
+      - name: Install system deps (retrying; GitHub apt mirrors are flaky)
+        shell: bash
+        run: |
+          set -euo pipefail
+          pkgs="libasound2-dev libudev-dev libdbus-1-dev libx11-dev libxi-dev libxtst-dev pkg-config"
+          for i in 1 2 3 4 5; do
+            if sudo apt-get update && sudo DEBIAN_FRONTEND=noninteractive apt-get install -y $pkgs; then
+              exit 0
+            fi
+            echo "apt attempt $i failed, retrying in 30s"
+            sleep 30
+          done
+          echo "apt install failed after 5 attempts" >&2
+          exit 1
       - name: cargo doc
         run: cargo doc --workspace --no-deps --exclude capto-app
       - name: Upload Pages artifact
