@@ -87,7 +87,14 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
-      - run: npm run test:coverage
+      - name: Frontend tests (coverage + timing report)
+        run: npm run test:coverage -- --reporter=json --outputFile=coverage/test-results.json
+      - name: Upload Vitest timing report
+        uses: actions/upload-artifact@v4
+        with:
+          name: frontend-vitest-results
+          path: apps/desktop/coverage/test-results.json
+          if-no-files-found: error
       - run: npx tsc --noEmit
 
   check-targets:

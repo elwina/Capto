@@ -12,6 +12,9 @@ export default defineConfig({
     // Expose afterEach globally so @testing-library/react auto-cleanup runs
     // between component tests (prevents DOM accumulation across cases).
     globals: true,
+    // Explicit parallel execution: test files run in isolated thread pools.
+    pool: "threads",
+    fileParallelism: true,
     coverage: {
       provider: "v8",
       // Coverage gate covers the modules that have unit tests: the hotkey
