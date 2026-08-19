@@ -32,6 +32,22 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - name: cargo doc
         run: cargo doc --workspace --no-deps --exclude capto-app
+      - name: Ensure root index.html (cargo doc omits it for --workspace --no-deps)
+        shell: pwsh
+        run: |
+          $doc = Join-Path (Get-Location) "target\doc"
+          if (-not (Test-Path -LiteralPath (Join-Path $doc "index.html"))) {
+            $first = Get-ChildItem -LiteralPath $doc -Directory |
+              Where-Object { Test-Path -LiteralPath (Join-Path $_.FullName "index.html") } |
+              Sort-Object Name | Select-Object -First 1
+            if (-not $first) { throw "no crate documentation directories found" }
+            $href = $first.Name + "/"
+            $html = "<!DOCTYPE html><html><head><meta charset=`"utf-8`"><meta http-equiv=`"refresh`" content=`"0; url=$href`"><title>Capto rustdoc</title></head><body>Capto rustdoc &mdash; <a href=`"$href`">$($first.Name)</a></body></html>"
+            Set-Content -LiteralPath (Join-Path $doc "index.html") -Value $html -Encoding utf8
+            Write-Host "Wrote root index.html -> $href"
+          } else {
+            Write-Host "cargo doc already produced a root index.html"
+          }
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:
