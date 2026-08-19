@@ -72,6 +72,7 @@ cargo fmt --all --check              # Rust rustfmt (must pass in CI)
 npm run lint --prefix apps/desktop   # frontend ESLint (must pass in CI)
 npm run format:check --prefix apps/desktop  # frontend Prettier (must pass in CI)
 npm test --prefix apps/desktop       # frontend Vitest unit tests
+npm run test:coverage --prefix apps/desktop  # unit tests + enforced coverage gate (CI)
 npm run tauri --prefix apps/desktop -- dev   # builds capto-app
 cargo run -p capto-cli -- doctor             # runs `capto`
 ```
