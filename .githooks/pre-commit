@@ -1,0 +1,19 @@
+#!/bin/sh
+# Pre-commit hook — routed to scripts/pre-commit.ps1 through whatever
+# PowerShell is available (pwsh on modern toolchains, powershell.exe via
+# Git Bash on Windows). Checks are opt-in per developer: install them with
+#   .\scripts\install-hooks.ps1        (sets core.hooksPath to .githooks)
+# Bypass for a one-off fast commit with `git commit --no-verify`.
+set -u
+root="$(git rev-parse --show-toplevel 2>/dev/null)" || exit 0
+
+if command -v pwsh >/dev/null 2>&1; then
+    exec pwsh -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$root/scripts/pre-commit.ps1"
+elif command -v powershell.exe >/dev/null 2>&1; then
+    exec powershell.exe -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$root/scripts/pre-commit.ps1"
+elif command -v powershell >/dev/null 2>&1; then
+    exec powershell -NoProfile -NonInteractive -ExecutionPolicy Bypass -File "$root/scripts/pre-commit.ps1"
+else
+    echo "pre-commit: no PowerShell found; skipping local checks" >&2
+    exit 0
+fi

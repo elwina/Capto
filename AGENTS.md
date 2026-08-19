@@ -102,6 +102,16 @@ Repo-hygiene guards (run when touching many files; enforced in CI):
 .\scripts\check-version-drift.ps1  # package.json vs tauri.conf.json version in lockstep
 ```
 
+Optional local pre-commit hooks (recommended; opt-in per clone):
+
+```powershell
+.\scripts\install-hooks.ps1     # sets core.hooksPath to .githooks
+```
+
+On every commit the hook runs file-size + tech-debt + `cargo fmt --check`, plus
+frontend lint/format/knip when `apps/desktop` sources change. Bypass once with
+`git commit --no-verify`. Hooks never replace CI — they only fail fast.
+
 Installer embeds CLI at `<install>\cli\capto.exe` and adds that folder to user **PATH** (NSIS hook). Not a separate Release asset. See `apps/desktop/src-tauri/binaries/README.md` and `windows/hooks.nsh`.
 
 ## Feature matrix

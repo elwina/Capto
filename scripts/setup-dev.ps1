@@ -43,6 +43,15 @@ Invoke-Step "Stage CLI into Tauri resources (debug)" {
     & .\scripts\copy-cli.ps1 -Profile debug
 }
 
+# Local pre-commit hooks are opt-in per clone but recommended for every dev.
+Write-Host ""
+Write-Host "==> Installing local pre-commit hooks (core.hooksPath -> .githooks)"
+if (-not (& git config --get core.hooksPath)) {
+    & .\scripts\install-hooks.ps1
+} else {
+    Write-Host "    hooks already installed (core.hooksPath set)"
+}
+
 Write-Host ""
 Write-Host "Dev environment ready. Start the app with:"
 Write-Host "  npm run tauri --prefix apps/desktop -- dev"
