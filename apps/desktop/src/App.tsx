@@ -215,6 +215,10 @@ export default function App() {
   return <MainApp />;
 }
 
+// Grandfathered from the complexity gate: legacy session-orchestration shell.
+// Refactor backlog tracked in docs/tech-debt.md#apptsx-mainapp (deferred from
+// the 2025-08 complexity gate rollout; requires live WGC/WASAPI to validate).
+/* eslint-disable-next-line complexity */
 function MainApp() {
   const { t } = useTranslation();
   const [tab, setTab] = useState<Tab>("main");
@@ -278,6 +282,10 @@ function MainApp() {
     quality,
   };
 
+  // Grandfathered from the complexity gate alongside MainApp (see
+  // docs/tech-debt.md#apptsx-mainapp). Refresh hydrates a dozen unrelated
+  // settings at once; split into per-domain loaders in the backlog.
+  /* eslint-disable-next-line complexity */
   const refresh = useCallback(async () => {
     try {
       const [s, d, a, st, wins, conflicts] = await Promise.all([

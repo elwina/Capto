@@ -2,8 +2,6 @@ import { useEffect, useMemo, useRef, useState, type CSSProperties } from "react"
 import { useTranslation } from "react-i18next";
 import type { MaskRect, PreviewFrameState } from "../hooks/usePreviewFrame";
 
-export type { PreviewSource, Region } from "../hooks/usePreviewFrame";
-
 export type WebcamConfig = {
   enabled?: boolean;
   deviceId?: string | null;

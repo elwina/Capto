@@ -25,8 +25,6 @@ export const SUPPORTED_LOCALES = [
   { id: "ru", nativeLabel: "Русский" },
 ] as const;
 
-export type SupportedLocaleId = (typeof SUPPORTED_LOCALES)[number]["id"];
-
 void i18n.use(initReactI18next).init({
   resources: {
     en: { translation: en },

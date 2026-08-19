@@ -30,6 +30,10 @@ export default tseslint.config(
       // `unknown` forces callers to narrow; overlay settings get explicit types
       // in src/overlays.ts so unchecked `any` is a lint error, not a choice.
       "@typescript-eslint/no-explicit-any": "error",
+      // Keep functions surveyable: cyclomatic-complexity ceiling of 20. The
+      // hotkey normalizer in HotkeySettings was split into small helpers to
+      // stay under it (hotkey parsing is exercised by unit tests).
+      complexity: ["error", 20],
       // Underscore-prefixed params/vars are the idiomatic "intentionally
       // unused" marker (e.g. useWebcamPreview keeps its (enabled, deviceId)
       // signature for API stability without using them yet).

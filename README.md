@@ -87,6 +87,13 @@ dsh --profile web --dump-config
 Restart `dsh web` and the agent's toolset includes the `capto_*` tools. Config reference and tool list: [`packages/capto-dsh-plugin`](packages/capto-dsh-plugin).
 
 ## Develop
+One command gets you from a fresh clone to a runnable `tauri dev`:
+
+```powershell
+.\scripts\setup-dev.ps1     # npm install + FFmpeg sidecar + CLI build/stage
+```
+
+Step-by-step (what setup-dev.ps1 does):
 
 ```bash
 npm install --prefix apps/desktop
@@ -98,12 +105,22 @@ cargo test --workspace
 cargo run -p capto-cli -- status
 ```
 
-If the CLI cannot find the desktop in dev:
+Environment variables (all optional; see `.env.example`):
 
 ```powershell
-$env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto-app.exe"
+$env:CAPTO_APP_PATH = "D:\AIWorkspace\Capto\target\debug\capto-app.exe"  # CLI->desktop auto-launch
+$env:RUST_LOG       = "debug"   # Rust tracing filter for CLI/app
 ```
 
+If the CLI cannot find the desktop in dev, point `CAPTO_APP_PATH` at a
+prebuilt `capto-app.exe` (see above).
+
+Repo-hygiene checks (also enforced in CI):
+
+```powershell
+.\scripts\check-file-size.ps1   # fails on oversized source files
+.\scripts\scan-tech-debt.ps1    # fails on TODO/FIXME/HACK/XXX in source
+```
 ## Author
 
 **Elwina Vardal** · [elwina.work](https://www.elwina.work) · [GitHub](https://github.com/elwina)

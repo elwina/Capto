@@ -87,6 +87,8 @@ jobs:
       - run: npm ci
       - run: npm run lint
       - run: npm run format:check
+      - name: Dead-code / unused-dependency scan (knip)
+        run: npm run knip
       - name: Frontend tests (coverage + timing report)
         run: npm run test:coverage -- --reporter=json --outputFile=coverage/test-results.json
       - name: Upload Vitest timing report
@@ -96,6 +98,36 @@ jobs:
           path: apps/desktop/coverage/test-results.json
           if-no-files-found: error
       - run: npx tsc --noEmit
+
+  hygiene:
+    name: Repo hygiene (file size + tech debt)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: large_file_detection guard
+        shell: pwsh
+        run: |
+          .\scripts\check-file-size.ps1 -OutFile check-file-size.txt
+
+      - name: tech_debt_tracking scan
+        shell: pwsh
+        run: |
+          .\scripts\scan-tech-debt.ps1 -OutFile tech-debt-report.txt
+
+      - name: agents_md_validation
+        shell: pwsh
+        run: |
+          .\scripts\validate-agents-md.ps1
+
+      - name: Upload hygiene reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: repo-hygiene-reports
+          path: |
+            check-file-size.txt
+            tech-debt-report.txt
+          if-no-files-found: ignore
 
   check-targets:
     name: Check ${{ matrix.arch }}

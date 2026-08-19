@@ -142,3 +142,37 @@ jobs:
         run: |
           set -euo pipefail
           gh release upload updater latest.json --repo "${{ github.repository }}" --clobber
+
+  # This repo has no PR workflow, so release notes are generated from commit
+  # history: every commit subject since the previous release is appended to
+  # the GitHub Release body. Conventional-commit trailers are stripped.
+  generate-changelog:
+    name: Append commit changelog to release notes
+    needs: release
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-latest
+    steps:
+      - name: Append changelog
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          set -euo pipefail
+          TAG="${GITHUB_REF_NAME}"
+          # Previous release tag = the one before this one in release order.
+          PREV="$(gh api "repos/${{ github.repository }}/releases" --jq 'map(.tag_name) | .[1] // empty')"
+          RANGE="${PREV:+${PREV}..}${TAG}"
+          NOTES="$(
+            gh api "repos/${{ github.repository }}/compare/${RANGE}" --jq '.commits[].commit.message' \
+              | grep -Ev '^\s*(Co-authored-by|Signed-off-by|Co-Authored-By|ci:|chore\(release\))' \
+              | grep -v '^\s*$' \
+              | head -n 80 \
+              | sed 's/^/- /'
+          )"
+          BODY="$(mktemp)"
+          gh api "repos/${{ github.repository }}/releases/tags/${TAG}" --jq '.body' > "$BODY"
+          {
+            printf '\n---\n\n## Commits (auto-generated)\n\n'
+            printf '%s\n' "$NOTES"
+          } >> "$BODY"
+          gh release edit "$TAG" --repo "${{ github.repository }}" --notes-file "$BODY"
+          echo "Appended changelog to release $TAG"

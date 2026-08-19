@@ -23,11 +23,32 @@ const ACTION_LABEL: Record<HotkeyAction, string> = {
   takeScreenshot: "hotkeyScreenshot",
 };
 
+function isModifierKey(key: string): boolean {
+  return key === "Control" || key === "Shift" || key === "Alt" || key === "Meta";
+}
+
+/** Keys that must not silently start a rebind (modifier-only or structural). */
+function isBlockedKey(e: KeyboardEvent): boolean {
+  return e.key === "Escape" || e.key === "Tab" || isModifierKey(e.key);
+}
+
+function hasModifier(e: KeyboardEvent): boolean {
+  return e.ctrlKey || e.altKey || e.shiftKey || e.metaKey;
+}
+
+/** Normalize the non-modifier key part of a shortcut from a KeyboardEvent. */
+function normalizeShortcutKey(e: KeyboardEvent): string | null {
+  if (/^F\d{1,2}$/i.test(e.key)) return e.key.toUpperCase();
+  if (/^F\d{1,2}$/i.test(e.code)) return e.code.toUpperCase();
+  if (e.code.startsWith("Key") && e.code.length === 4) return e.code.slice(3);
+  if (e.code.startsWith("Digit") && e.code.length === 6) return e.code.slice(5);
+  if (e.key.length === 1 && /[a-z0-9]/i.test(e.key)) return e.key.toUpperCase();
+  return null;
+}
+
 /** Build a Capto/Tauri shortcut string from a KeyboardEvent. */
 export function shortcutFromEvent(e: KeyboardEvent): string | null {
-  if (e.key === "Escape" || e.key === "Tab") return null;
-  const isMod = e.key === "Control" || e.key === "Shift" || e.key === "Alt" || e.key === "Meta";
-  if (isMod) return null;
+  if (isBlockedKey(e)) return null;
 
   const parts: string[] = [];
   if (e.ctrlKey) parts.push("Control");
@@ -35,32 +56,15 @@ export function shortcutFromEvent(e: KeyboardEvent): string | null {
   if (e.shiftKey) parts.push("Shift");
   if (e.metaKey) parts.push("Super");
 
-  let key: string | null = null;
-  if (/^F\d{1,2}$/i.test(e.key)) {
-    key = e.key.toUpperCase();
-  } else if (/^F\d{1,2}$/i.test(e.code)) {
-    key = e.code.toUpperCase();
-  } else if (e.code.startsWith("Key") && e.code.length === 4) {
-    key = e.code.slice(3);
-  } else if (e.code.startsWith("Digit") && e.code.length === 6) {
-    key = e.code.slice(5);
-  } else if (e.key.length === 1 && /[a-z0-9]/i.test(e.key)) {
-    key = e.key.toUpperCase();
-  }
+  // Require at least one modifier for global hotkeys (avoids hijacking plain keys).
+  if (!hasModifier(e)) return null;
+
+  const key = normalizeShortcutKey(e);
   if (!key) return null;
 
-  // Require at least one modifier for global hotkeys (avoids hijacking plain keys).
-  if (parts.length === 0) return null;
-
   // Windows: Alt+F4 closes the focused window — never allow it.
-  if (
-    parts.includes("Alt") &&
-    !parts.includes("Control") &&
-    !parts.includes("Shift") &&
-    key === "F4"
-  ) {
-    return null;
-  }
+  const bareAlt = parts.includes("Alt") && !e.ctrlKey && !e.shiftKey;
+  if (bareAlt && key === "F4") return null;
 
   parts.push(key);
   return parts.join("+");

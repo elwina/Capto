@@ -65,6 +65,12 @@ cargo run -p capto-cli -- status
 
 ## Dev commands
 
+Fresh clone → runnable dev env in one command (npm deps + FFmpeg sidecar + staged CLI):
+
+```powershell
+.\scripts\setup-dev.ps1       # or -Local to prefer a local ffmpeg.exe
+```
+
 ```bash
 npm install --prefix apps/desktop
 cargo test --workspace
@@ -85,6 +91,16 @@ cargo build -p capto-cli --release
 .\scripts\copy-cli.ps1
 ```
 
+Optional local env vars (see `.env.example`): `CAPTO_APP_PATH`, `RUST_LOG`,
+`RUST_BACKTRACE`.
+
+Repo-hygiene guards (run when touching many files; enforced in CI):
+
+```powershell
+.\scripts\check-file-size.ps1   # no oversized source files
+.\scripts\scan-tech-debt.ps1    # no TODO/FIXME/HACK/XXX in source
+```
+
 Installer embeds CLI at `<install>\cli\capto.exe` and adds that folder to user **PATH** (NSIS hook). Not a separate Release asset. See `apps/desktop/src-tauri/binaries/README.md` and `windows/hooks.nsh`.
 
 ## Feature matrix
@@ -98,3 +114,9 @@ See [docs/CI.md](docs/CI.md). Summary:
 - **CI** (`.github/workflows/ci.yml`): tests on push/PR — not a publisher
 - **Release** (`.github/workflows/release.yml`): tag `v*` → Windows NSIS for x64 + ARM64 with FFmpeg from `elwina/capto-ffmpeg` (pin in `.github/capto-ffmpeg.env`); signed updater artifacts; rolling `updater` release hosts `latest.json`
 - Current app version **1.0.0**; `v1.*` releases are **stable** (v0.* were prerelease)
+
+Also see:
+
+- `docs/runbooks/` — incident response (security, release, CI failure triage)
+- `docs/tech-debt.md` — tracked, deliberate refactor backlog (grandfathered
+  complexity entries); new code must pass the complexity gate

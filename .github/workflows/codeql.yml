@@ -1,0 +1,43 @@
+name: CodeQL
+
+# GitHub code scanning via CodeQL (semantic analysis, not just regex).
+# javascript-typescript covers the React/Vite frontend and npm packages;
+# its "Rust" support is still beta so we leave it out of the matrix until
+# it ships stable. Runs on push/PR plus a weekly schedule.
+#
+# See docs/runbooks/security.md for response steps if this fires.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 4 * * 1"
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: Analyze (${{ matrix.language }})
+    runs-on: ubuntu-latest
+    timeout-minutes: 360
+    strategy:
+      fail-fast: false
+      matrix:
+        language: [javascript-typescript]
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      - name: Perform CodeQL Analysis
+        uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:${{ matrix.language }}"
